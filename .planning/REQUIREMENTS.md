@@ -17,8 +17,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Configuration
 
-- [ ] **CONF-01**: User can set mosque slug via Garmin Connect phone app settings
-- [ ] **CONF-02**: Settings sync to watch via Properties and trigger data re-fetch
+- [x] **CONF-01**: User can set mosque slug via Garmin Connect phone app settings
+- [x] **CONF-02**: Settings sync to watch via Properties and trigger data re-fetch
 
 ### Prayer Logic
 
@@ -80,8 +80,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 1 | Pending |
 | DATA-04 | Phase 1 | Pending |
 | DATA-05 | Phase 1 | Pending |
-| CONF-01 | Phase 1 | Pending |
-| CONF-02 | Phase 1 | Pending |
+| CONF-01 | Phase 1 | Complete |
+| CONF-02 | Phase 1 | Complete |
 | PRAY-01 | Phase 2 | Pending |
 | PRAY-02 | Phase 2 | Pending |
 | PRAY-03 | Phase 2 | Pending |
