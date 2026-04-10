@@ -1,0 +1,7 @@
+<resources>
+    <strings>
+        <string id="AppName">Mawaqit</string>
+        <string id="MosqueSettingTitle">Mosque ID</string>
+        <string id="MosqueSettingPrompt">Enter your mosque slug from mawaqit.net</string>
+    </strings>
+</resources>

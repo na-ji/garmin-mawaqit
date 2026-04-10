@@ -1,0 +1,9 @@
+<resources>
+    <settings>
+        <setting propertyKey="@Properties.mosqueSetting"
+                 title="@Strings.MosqueSettingTitle"
+                 prompt="@Strings.MosqueSettingPrompt">
+            <settingConfig type="alphaNumeric" required="false" />
+        </setting>
+    </settings>
+</resources>
