@@ -75,29 +75,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| DATA-04 | — | Pending |
-| DATA-05 | — | Pending |
-| CONF-01 | — | Pending |
-| CONF-02 | — | Pending |
-| PRAY-01 | — | Pending |
-| PRAY-02 | — | Pending |
-| PRAY-03 | — | Pending |
-| GLNC-01 | — | Pending |
-| GLNC-02 | — | Pending |
-| WDGT-01 | — | Pending |
-| WDGT-02 | — | Pending |
-| WDGT-03 | — | Pending |
-| BKGD-01 | — | Pending |
-| BKGD-02 | — | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DATA-05 | Phase 1 | Pending |
+| CONF-01 | Phase 1 | Pending |
+| CONF-02 | Phase 1 | Pending |
+| PRAY-01 | Phase 2 | Pending |
+| PRAY-02 | Phase 2 | Pending |
+| PRAY-03 | Phase 2 | Pending |
+| GLNC-01 | Phase 2 | Pending |
+| GLNC-02 | Phase 2 | Pending |
+| WDGT-01 | Phase 3 | Pending |
+| WDGT-02 | Phase 3 | Pending |
+| WDGT-03 | Phase 3 | Pending |
+| BKGD-01 | Phase 3 | Pending |
+| BKGD-02 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-10*
-*Last updated: 2026-04-10 after initial definition*
+*Last updated: 2026-04-10 after roadmap creation*
