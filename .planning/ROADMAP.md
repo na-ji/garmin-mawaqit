@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Project scaffolding and mosque configuration (CONF-01, CONF-02)
-- [ ] 01-02-PLAN.md — Data fetching service and storage layer (DATA-01 through DATA-05)
+- [x] 01-02-PLAN.md — Data fetching service and storage layer (DATA-01 through DATA-05)
 
 ### Phase 2: Prayer Logic & Glance
 **Goal**: Users can glance at their wrist and see the next prayer name, time, and countdown

@@ -9,11 +9,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data & API
 
-- [ ] **DATA-01**: App fetches prayer times from the Mawaqit API via `https://mawaqit.naj.ovh/api/v1/{slug}/`
-- [ ] **DATA-02**: Prayer data cached in Application.Storage for offline use
-- [ ] **DATA-03**: App displays last cached data when phone/API is unavailable
-- [ ] **DATA-04**: App stores two days of prayer data for Isha-to-Fajr rollover
-- [ ] **DATA-05**: App fetches and displays iqama times from the API
+- [x] **DATA-01**: App fetches prayer times from the Mawaqit API via `https://mawaqit.naj.ovh/api/v1/{slug}/`
+- [x] **DATA-02**: Prayer data cached in Application.Storage for offline use
+- [x] **DATA-03**: App displays last cached data when phone/API is unavailable
+- [x] **DATA-04**: App stores two days of prayer data for Isha-to-Fajr rollover
+- [x] **DATA-05**: App fetches and displays iqama times from the API
 
 ### Configuration
 
@@ -75,11 +75,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
-| DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
-| DATA-05 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
+| DATA-02 | Phase 1 | Complete |
+| DATA-03 | Phase 1 | Complete |
+| DATA-04 | Phase 1 | Complete |
+| DATA-05 | Phase 1 | Complete |
 | CONF-01 | Phase 1 | Complete |
 | CONF-02 | Phase 1 | Complete |
 | PRAY-01 | Phase 2 | Pending |
