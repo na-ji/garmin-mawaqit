@@ -10,7 +10,7 @@ Phase 1 builds the data backbone: fetching prayer times from the Mawaqit proxy A
 
 Fortunately, the proxy API at `mawaqit.naj.ovh` exposes fine-grained endpoints -- `/prayer-times` (96 bytes), `/calendar/{month}` (~3.2 KB), and `/calendar-iqama/{month}` (~2.3 KB) -- that individually fit well within safe limits. The architecture must use multiple smaller requests instead of one large request. This changes the user's original decision (D-02) to store the full 12-month calendar: while that goal remains achievable over time via sequential monthly fetches, the initial data fetch and any foreground refresh must use the per-month endpoints.
 
-**Primary recommendation:** Use the per-month API endpoints (`/calendar/{month}` and `/calendar-iqama/{month}`) to fetch 2 months of data (current + next) per refresh cycle, storing results across multiple Storage keys. Use `/prayer-times` for immediate display data. Do NOT attempt to fetch the full endpoint in a single `makeWebRequest()` call.
+**Primary recommendation:** Use the per-month API endpoints (`/calendar/{month}` and `/calendar-iqama/{month}`) to fetch 2 months of data (current + next) per refresh cycle, storing results across multiple Storage keys. Use `/prayer-times` for immediate display data. Fetch mosque metadata from the new `/metadata` endpoint (D-08). Do NOT attempt to fetch the full endpoint in a single `makeWebRequest()` call.
 
 <user_constraints>
 ## User Constraints (from CONTEXT.md)
@@ -23,6 +23,7 @@ Fortunately, the proxy API at `mawaqit.naj.ovh` exposes fine-grained endpoints -
 - **D-05:** Before a mosque is configured, show an empty state with instructions -- the normal layout with placeholder dashes and a brief message directing the user to Garmin Connect to set their mosque.
 - **D-06:** Always show cached data without any staleness warning or age indicator.
 - **D-07:** When cached calendar data has fully expired (no entry for the current date and no future data), switch to the empty state.
+- **D-08:** Mosque metadata (name, timezone, jumua, jumua2, shuruq, hijriAdjustment) will be fetched from a new dedicated endpoint: `GET /api/v1/{slug}/metadata` (~200 bytes). The user is forking the unofficial API to add this endpoint. Expected response: `{ "name", "timezone", "jumua", "jumua2", "shuruq", "hijriAdjustment" }`.
 
 ### Claude's Discretion
 - **Error communication:** How much detail to show when things go wrong (bad slug, API down, no BLE connection). Claude has flexibility to design appropriate error handling.
@@ -38,7 +39,7 @@ None -- discussion stayed within phase scope.
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| DATA-01 | App fetches prayer times from Mawaqit API via endpoint | API endpoints verified: `/prayer-times`, `/calendar/{month}`, `/calendar-iqama/{month}`. Per-month endpoints return 2-3 KB each, safely within device limits. |
+| DATA-01 | App fetches prayer times from Mawaqit API via endpoint | API endpoints verified: `/prayer-times`, `/calendar/{month}`, `/calendar-iqama/{month}`, `/metadata` (D-08). Per-month endpoints return 2-3 KB each, metadata ~200 bytes, safely within device limits. |
 | DATA-02 | Prayer data cached in Application.Storage for offline use | Storage API verified: `Storage.setValue()`/`getValue()` with 32 KB per-key limit, ~100 KB total. Monthly data fits comfortably. |
 | DATA-03 | App displays last cached data when phone/API unavailable | Storage survives app stop/start cycles. Load from Storage on startup, fall back gracefully on HTTP errors (-104 BLE, -300 timeout). |
 | DATA-04 | App stores two days of prayer data for Isha-to-Fajr rollover | Per-month calendar endpoint returns all days for a month. Store current + next month to always have tomorrow's Fajr available. |
@@ -66,20 +67,22 @@ Garmin Connect IQ `makeWebRequest()` with JSON response type has an undocumented
 | `/prayer-times` | 96 bytes | YES - trivially safe |
 | `/calendar/{month}` | ~3.2 KB | YES - very safe |
 | `/calendar-iqama/{month}` | ~2.3 KB | YES - very safe |
+| `/metadata` (D-08) | ~200 bytes | YES - trivially safe |
 | 2 months combined | ~11 KB total (4 requests) | YES - each request individually safe |
 
-[VERIFIED: All sizes measured against live API on 2026-04-10]
+[VERIFIED: All sizes measured against live API on 2026-04-10. Metadata endpoint size estimated from D-08.]
 
-### The Solution: Use Per-Month Endpoints
+### The Solution: Use Per-Month Endpoints + Metadata Endpoint
 
 The proxy API exposes fine-grained endpoints discovered via the OpenAPI spec at `/openapi.json`:
 
 ```
-GET /api/v1/{slug}/prayer-times        -- Today's 5 prayer times (96 bytes)
-GET /api/v1/{slug}/calendar/{month}    -- One month of prayer times (~3.2 KB)  
+GET /api/v1/{slug}/prayer-times           -- Today's 5 prayer times (96 bytes)
+GET /api/v1/{slug}/calendar/{month}       -- One month of prayer times (~3.2 KB)  
 GET /api/v1/{slug}/calendar-iqama/{month} -- One month of iqama offsets (~2.3 KB)
+GET /api/v1/{slug}/metadata               -- Mosque metadata (~200 bytes) [D-08, user-added]
 ```
-[VERIFIED: live API, OpenAPI spec at https://mawaqit.naj.ovh/openapi.json]
+[VERIFIED: live API, OpenAPI spec at https://mawaqit.naj.ovh/openapi.json. Metadata endpoint added by user per D-08.]
 
 ### Impact on D-02 (Full 12-Month Calendar)
 
@@ -87,17 +90,11 @@ User decision D-02 says "store the full 12-month calendar." This is still achiev
 
 **Recommended approach:** Fetch 2 months (current + next) initially, which covers DATA-04 (Isha-to-Fajr rollover) and provides ~60 days of offline data. Background service can progressively fetch remaining months. This gives the best balance of immediate usability vs. offline resilience.
 
-### Missing Metadata Problem
+### Mosque Metadata -- RESOLVED via D-08
 
-The metadata fields (mosque `name`, `timezone`, `jumua`/`jumua2`, `shuruq`, `hijriAdjustment`) are only available from the full endpoint (`/{slug}/`), which is too large. The `/prayer-times` endpoint returns today's times but without mosque name or timezone.
+The metadata fields (mosque `name`, `timezone`, `jumua`/`jumua2`, `shuruq`, `hijriAdjustment`) were previously only available from the full endpoint (`/{slug}/`), which is too large. This has been resolved: the user is forking the proxy API to add a dedicated `GET /api/v1/{slug}/metadata` endpoint returning only these fields (~200 bytes). See D-08 in CONTEXT.md.
 
-**Options (Claude's discretion):**
-1. **Fetch full endpoint as plain text** -- Use `HTTP_RESPONSE_CONTENT_TYPE_TEXT_PLAIN` and manually extract metadata fields. Avoids JSON dictionary overhead but requires string parsing. Available since API 3.0.0. [CITED: Garmin Forums]
-2. **Accept the risk on the full endpoint** -- Modern devices (Fenix 7+, Venu 2+) may handle 40 KB. Catch -402/-403 gracefully and fall back.
-3. **Request proxy enhancement** -- Ask user to add a `/metadata` endpoint that returns just name, timezone, jumua, shuruq, hijriAdjustment (~193 bytes).
-4. **Skip metadata on initial fetch** -- Use slug as display name, infer timezone from device. Fetch full endpoint only as background task where memory budget differs.
-
-**Recommendation:** Option 3 (proxy enhancement) is the cleanest. If not feasible, Option 1 (plain text) is the safest technical fallback. The planner should flag this for user confirmation.
+The metadata fetch is added to the request chain alongside calendar/iqama fetches. The response is stored in Storage key `"mosqueMeta"`.
 
 ## Standard Stack
 
@@ -212,7 +209,7 @@ class GarminMawaqitApp extends Application.AppBase {
 
 ```
 Storage Keys:
-    "mosqueMeta"      -> { "name": "...", "timezone": "...", "jumua": "...", "shuruq": "...", "hijriAdj": N }
+    "mosqueMeta"      -> { "name": "...", "timezone": "...", "jumua": "...", "jumua2": "...", "shuruq": "...", "hijriAdjustment": N }
     "cal_1" ... "cal_12"  -> Array of day objects for each month
     "iqama_1" ... "iqama_12" -> Array of iqama offset objects for each month
     "todayTimes"      -> { "fajr": "...", "dohr": "...", ... } from /prayer-times
@@ -462,7 +459,21 @@ Returns an Array of iqama offset objects:
 ```
 Offsets are relative strings (minutes after adhan). No sunrise iqama. [VERIFIED: live API]
 
-### Full Endpoint rawdata (Metadata Fields)
+### /metadata Endpoint (D-08)
+Returns mosque metadata (~200 bytes):
+```json
+{
+    "name": "Mosquee Tawba",
+    "timezone": "Europe/Paris",
+    "hijriAdjustment": -1,
+    "jumua": "12:30",
+    "jumua2": "13:45",
+    "shuruq": "07:08"
+}
+```
+Added by user to the forked proxy API per D-08. Resolves the constraint that the full endpoint (40.3 KB) exceeds Garmin's JSON parsing limit.
+
+### Full Endpoint rawdata (Metadata Fields) -- Reference Only
 ```json
 {
     "name": "Mosquee Tawba",
@@ -500,22 +511,19 @@ Offsets are relative strings (minutes after adhan). No sunrise iqama. [VERIFIED:
 | A3 | `settingConfig required="false"` allows blank/empty mosque slug to be saved | Code Examples | If forced required, user cannot clear the setting. Minor UX issue. |
 | A4 | Device product IDs are `venu2`, `venu2plus`, `fenix7`, `fr265`, `fenix8` | Code Examples | Build would fail for invalid device IDs. Check SDK device list during implementation. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Mosque metadata without full endpoint**
+1. **Mosque metadata without full endpoint** -- RESOLVED (D-08)
    - What we know: name, timezone, jumua, shuruq, hijriAdjustment are only in the full 40.3 KB endpoint
-   - What's unclear: Can the proxy be modified to add a `/metadata` endpoint? Will the full endpoint work as plain text?
-   - Recommendation: Ask user if proxy can be enhanced. If not, implement plain-text fallback or skip metadata (use slug as display name, device timezone).
+   - **Resolution:** User is forking the proxy API to add `GET /api/v1/{slug}/metadata` (~200 bytes). Returns `{ "name", "timezone", "jumua", "jumua2", "shuruq", "hijriAdjustment" }`. See D-08 in CONTEXT.md. This endpoint is small enough to fetch safely alongside calendar/iqama requests.
 
-2. **Background service for initial data fetch in Phase 1**
+2. **Background service for initial data fetch in Phase 1** -- RESOLVED (Phase 3 scope)
    - What we know: Background services are covered in Phase 3 (BKGD-01, BKGD-02). Phase 1 is data pipeline only.
-   - What's unclear: Should Phase 1 include the background temporal event registration, or just foreground fetch?
-   - Recommendation: Phase 1 should implement foreground fetch only (triggered by widget open and settings change). Background service is Phase 3 scope.
+   - **Resolution:** Phase 1 implements foreground fetch only (triggered by widget open and settings change). Background temporal event registration is Phase 3 scope. No ambiguity remains.
 
-3. **Multiple sequential HTTP requests timing**
+3. **Multiple sequential HTTP requests timing** -- RESOLVED (accepted risk, monitor during testing)
    - What we know: makeWebRequest is async. Responses come via callbacks. Cannot make parallel requests reliably.
-   - What's unclear: Is there a limit on how many sequential requests can be chained? Any throttling?
-   - Recommendation: Chain requests via callbacks. Limit to 4-5 requests per refresh cycle (2 calendar + 2 iqama months + 1 prayer-times). Monitor for issues during testing.
+   - **Resolution:** Chain requests via callbacks. The fetch chain is 6 requests (2 calendar + 2 iqama + 1 metadata + 1 prayer-times). No documented limit on sequential chaining exists. Accepted risk: if throttling occurs, the chain aborts silently per D-06 and cached data remains intact. Will monitor during device testing.
 
 ## Project Constraints (from CLAUDE.md)
 
