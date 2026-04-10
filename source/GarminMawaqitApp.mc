@@ -16,7 +16,7 @@ class GarminMawaqitApp extends Application.AppBase {
     function onStart(state as Dictionary?) as Void {
         _currentSlug = getMosqueSlug();
         if (_currentSlug != null) {
-            // TODO: Plan 02 will trigger fetchPrayerData(_currentSlug) here
+            MawaqitService.fetchPrayerData(_currentSlug);
         }
     }
 
@@ -40,7 +40,7 @@ class GarminMawaqitApp extends Application.AppBase {
             // Mosque slug changed to a new valid value
             _currentSlug = newSlug;
             clearCachedData();
-            // TODO: Plan 02 will trigger fetchPrayerData(newSlug) here
+            MawaqitService.fetchPrayerData(newSlug);
         } else if (newSlug == null && _currentSlug != null) {
             // User cleared the mosque slug
             _currentSlug = null;
