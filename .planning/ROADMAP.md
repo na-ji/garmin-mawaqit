@@ -28,11 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Fetched prayer data persists in Application.Storage and is available after app restart
   4. Two days of prayer data are stored so Isha-to-Fajr rollover has the data it needs
   5. When phone/API is unreachable, app loads and displays last cached data without crashing
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Project scaffolding and mosque configuration (CONF-01, CONF-02)
+- [ ] 01-02-PLAN.md — Data fetching service and storage layer (DATA-01 through DATA-05)
 
 ### Phase 2: Prayer Logic & Glance
 **Goal**: Users can glance at their wrist and see the next prayer name, time, and countdown
@@ -74,6 +74,6 @@ Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Pipeline & Configuration | 0/? | Not started | - |
+| 1. Data Pipeline & Configuration | 0/2 | Planned | - |
 | 2. Prayer Logic & Glance | 0/? | Not started | - |
 | 3. Widget & Background Service | 0/? | Not started | - |
