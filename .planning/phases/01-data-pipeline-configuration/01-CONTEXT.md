@@ -17,6 +17,7 @@ This phase delivers the data infrastructure: fetching prayer times from the Mawa
 - **D-01:** Store prayer-relevant fields only from the API response: `calendar`, `iqamaCalendar`, `times`, `shuruq`, `jumua`/`jumua2`, `name`, `timezone`, `hijriAdjustment`. Skip announcements, images, facility flags, flash messages, and other mosque metadata.
 - **D-02:** Store the full 12-month calendar (not just two days). User confirmed the full calendar response is under 36KB. This gives maximum offline resilience — accurate prayer times for months without a refresh.
 - **D-03:** The API response is wrapped in a `rawdata` top-level key. Calendar is an array of 12 monthly objects, each with days 1-31. Each day has 6 time strings (Fajr, Shuruq, Dhuhr, Asr, Maghrib, Isha). Iqama calendar has 5 offset strings per day (relative offsets like `"+10"`).
+- **D-08:** Mosque metadata (name, timezone, jumua, jumua2, shuruq, hijriAdjustment) will be fetched from a new dedicated endpoint: `GET /api/v1/{slug}/metadata` (~200 bytes). The user is forking the unofficial API (cloned at `/Users/thenaji27/www/mawaqit-api`) to add this endpoint. Expected response: `{ "name", "timezone", "jumua", "jumua2", "shuruq", "hijriAdjustment" }`. This resolves the constraint that the full endpoint (40.3 KB) exceeds Garmin's JSON parsing limit (~16-32 KB).
 
 ### First-Launch Experience
 - **D-04:** No default mosque slug. `properties.xml` ships with an empty value. User must configure their mosque slug via the Garmin Connect phone app.
