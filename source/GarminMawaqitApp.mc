@@ -1,9 +1,10 @@
-using Toybox.Application;
-using Toybox.Application.Properties;
-using Toybox.Application.Storage;
-using Toybox.WatchUi;
-using Toybox.System;
-using Toybox.Graphics;
+import Toybox.Application;
+import Toybox.Application.Properties;
+import Toybox.Application.Storage;
+import Toybox.WatchUi;
+import Toybox.System;
+import Toybox.Graphics;
+import Toybox.Lang;
 
 class GarminMawaqitApp extends Application.AppBase {
 
@@ -30,8 +31,8 @@ class GarminMawaqitApp extends Application.AppBase {
     }
 
     (:glance)
-    function getGlanceView() as [GlanceView] or Null {
-        return [new $.MawaqitGlanceView()] as [GlanceView];
+    function getGlanceView() {
+        return [new $.MawaqitGlanceView()];
     }
 
     function onSettingsChanged() as Void {
@@ -81,11 +82,25 @@ class MawaqitWidgetView extends WatchUi.View {
     function onUpdate(dc as Graphics.Dc) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
+
+        // Show fetch status on screen for debugging
+        var slug = Properties.getValue("mosqueSetting") as String or Null;
+        var status = "No mosque";
+        if (slug != null && !slug.equals("")) {
+            status = slug;
+            var times = Storage.getValue("todayTimes");
+            if (times != null) {
+                status = "OK: " + slug;
+            } else {
+                status = "Fetching: " + slug;
+            }
+        }
+
         dc.drawText(
             dc.getWidth() / 2,
             dc.getHeight() / 2,
-            Graphics.FONT_MEDIUM,
-            "Mawaqit",
+            Graphics.FONT_SMALL,
+            status,
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
         );
     }

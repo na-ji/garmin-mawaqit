@@ -1,7 +1,7 @@
-using Toybox.Application.Storage;
-using Toybox.Time;
-using Toybox.Time.Gregorian;
-using Toybox.Lang;
+import Toybox.Application.Storage;
+import Toybox.Time;
+import Toybox.Time.Gregorian;
+import Toybox.Lang;
 
 //
 // PrayerDataStore: Read-side storage layer for cached prayer data.

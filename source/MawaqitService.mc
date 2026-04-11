@@ -1,14 +1,22 @@
-using Toybox.Communications;
-using Toybox.Application.Storage;
-using Toybox.Time;
-using Toybox.Time.Gregorian;
-using Toybox.System;
-using Toybox.Lang;
-using Toybox.WatchUi;
+import Toybox.Communications;
+import Toybox.Application.Storage;
+import Toybox.Time;
+import Toybox.Time.Gregorian;
+import Toybox.System;
+import Toybox.Lang;
+import Toybox.WatchUi;
 
-module MawaqitService {
+//
+// MawaqitService: HTTP service that fetches prayer data and mosque metadata
+// through sequential API calls. Uses a class (not module) because
+// method(:callback) requires an object context for makeWebRequest callbacks.
+//
+class MawaqitService {
 
-    const API_BASE = "https://mawaqit.naj.ovh/api/v1/";
+    static const API_BASE = "https://mawaqit.naj.ovh/api/v1/";
+
+    // Singleton instance
+    private static var _instance as MawaqitService or Null = null;
 
     var _fetchSlug as String or Null = null;
     var _fetchMonth as Number = 0;
@@ -16,13 +24,31 @@ module MawaqitService {
     var _isFetching as Boolean = false;
     var _fetchStep as Number = -1;
 
+    function initialize() {
+    }
+
     //
-    // Entry point: kicks off the sequential request chain.
-    // Fetches: calendar (current month), calendar (next month),
-    //          iqama (current month), iqama (next month),
-    //          metadata, prayer-times
+    // Returns (and lazily creates) the singleton instance.
     //
-    function fetchPrayerData(slug as String) as Void {
+    static function getInstance() as MawaqitService {
+        if (_instance == null) {
+            _instance = new MawaqitService();
+        }
+        return _instance;
+    }
+
+    //
+    // Static entry point: kicks off the sequential request chain.
+    // Callers use MawaqitService.fetchPrayerData(slug).
+    //
+    static function fetchPrayerData(slug as String) as Void {
+        getInstance()._startFetch(slug);
+    }
+
+    //
+    // Instance method that actually starts the fetch chain.
+    //
+    function _startFetch(slug as String) as Void {
         if (_isFetching) {
             return;
         }
@@ -86,16 +112,13 @@ module MawaqitService {
 
     //
     // Callback for calendar endpoint responses.
-    // Stores the Array of day objects under "cal_{month}" key.
     //
-    function onCalendarReceive(responseCode as Number, data) as Void {
+    function onCalendarReceive(responseCode as Number, data as Dictionary or String or Null) as Void {
         if (responseCode == 200 && data != null) {
-            // Determine which month was fetched based on step
             var month = (_fetchStep == 0) ? _fetchMonth : _fetchNextMonth;
             Storage.setValue("cal_" + month, data);
             _processNextStep();
         } else {
-            // Abort chain silently (D-06: leave cached data intact)
             _isFetching = false;
         }
     }
@@ -118,16 +141,13 @@ module MawaqitService {
 
     //
     // Callback for iqama endpoint responses.
-    // Stores the Array of iqama offset objects under "iqama_{month}" key.
     //
-    function onIqamaReceive(responseCode as Number, data) as Void {
+    function onIqamaReceive(responseCode as Number, data as Dictionary or String or Null) as Void {
         if (responseCode == 200 && data != null) {
-            // Determine which month was fetched based on step
             var month = (_fetchStep == 2) ? _fetchMonth : _fetchNextMonth;
             Storage.setValue("iqama_" + month, data);
             _processNextStep();
         } else {
-            // Abort chain silently (D-06: leave cached data intact)
             _isFetching = false;
         }
     }
@@ -150,14 +170,12 @@ module MawaqitService {
 
     //
     // Callback for metadata endpoint response.
-    // Stores the full Dictionary under "mosqueMeta" key (D-01/D-08).
     //
-    function onMetadataReceive(responseCode as Number, data) as Void {
+    function onMetadataReceive(responseCode as Number, data as Dictionary or String or Null) as Void {
         if (responseCode == 200 && data != null) {
             Storage.setValue("mosqueMeta", data);
             _processNextStep();
         } else {
-            // Abort chain silently (D-06: leave cached data intact)
             _isFetching = false;
         }
     }
@@ -180,9 +198,8 @@ module MawaqitService {
 
     //
     // Callback for prayer-times endpoint response.
-    // Stores today's times and records fetch metadata, then refreshes UI.
     //
-    function onPrayerTimesReceive(responseCode as Number, data) as Void {
+    function onPrayerTimesReceive(responseCode as Number, data as Dictionary or String or Null) as Void {
         if (responseCode == 200 && data != null) {
             Storage.setValue("todayTimes", data);
 
@@ -197,7 +214,6 @@ module MawaqitService {
             // Refresh display with new data
             WatchUi.requestUpdate();
         } else {
-            // Abort silently (D-06: leave cached data intact)
             _isFetching = false;
         }
     }
