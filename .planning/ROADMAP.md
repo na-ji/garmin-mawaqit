@@ -64,7 +64,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — Full Widget view with 5-row prayer schedule, countdown, and highlighted next prayer (WDGT-01, WDGT-02, WDGT-03)
-- [ ] 03-02-PLAN.md — Background service delegate and temporal event registration (BKGD-01, BKGD-02)
+- [x] 03-02-PLAN.md — Background service delegate and temporal event registration (BKGD-01, BKGD-02)
 
 ## Progress
 

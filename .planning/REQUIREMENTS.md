@@ -39,8 +39,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Background Service
 
-- [ ] **BKGD-01**: Background service refreshes data periodically via temporal events
-- [ ] **BKGD-02**: Background service re-fetches when mosque settings change
+- [x] **BKGD-01**: Background service refreshes data periodically via temporal events
+- [x] **BKGD-02**: Background service re-fetches when mosque settings change
 
 ## v2 Requirements
 
@@ -90,8 +90,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WDGT-01 | Phase 3 | Complete |
 | WDGT-02 | Phase 3 | Complete |
 | WDGT-03 | Phase 3 | Complete |
-| BKGD-01 | Phase 3 | Pending |
-| BKGD-02 | Phase 3 | Pending |
+| BKGD-01 | Phase 3 | Complete |
+| BKGD-02 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 17 total
