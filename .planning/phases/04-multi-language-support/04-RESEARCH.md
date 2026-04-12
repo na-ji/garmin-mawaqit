@@ -375,17 +375,19 @@ module PrayerLogic {
 | A1 | Parameter-passing approach for formatCountdown() avoids WatchUi dependency in PrayerLogic module | Architecture Patterns - Pattern 2 | LOW -- if wrong, the alternative is calling loadResource inside PrayerLogic which would still work but couples the module to WatchUi |
 | A2 | Simulator language setting accessible via menu for testing | Code Examples | LOW -- exact menu path may differ but simulator does support language switching (confirmed by multiple forum posts) |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact French wording for settings**
    - What we know: "Mosque ID" needs a French translation. User gave discretion to Claude.
    - What's unclear: Whether "ID Mosquee" or "Identifiant de la mosquee" or another variant is most natural.
    - Recommendation: Use "ID Mosquee" -- concise, matches the technical nature of a slug identifier. Planner can adjust.
+   - **Resolution:** Claude's Discretion grant in CONTEXT.md covers this. Plans use "ID Mosquee".
 
 2. **AppName localization**
    - What we know: "Mawaqit" is the app name and brand -- stays the same in all languages.
    - What's unclear: Whether `AppName` string should appear in `resources-fre/strings.xml` as an explicit override or be omitted (inheriting from base).
    - Recommendation: Omit from French file -- the CIQ framework falls back to base resources for strings not overridden. Less duplication.
+   - **Resolution:** Plans omit AppName from French file, using base resource inheritance.
 
 ## Sources
 
