@@ -95,12 +95,12 @@ class MawaqitWidgetView extends WatchUi.View {
         }
 
         // --- Layout calculations (proportional to screen size) ---
-        var headerY = h * 15 / 100;
-        var sepY = h * 24 / 100;
+        var headerY = h * 20 / 100;
+        var sepY = h * 28 / 100;
         var leftMargin = w * 12 / 100;
         var rightMargin = w - leftMargin;
-        var rowStartY = h * 30 / 100;
-        var rowSpacing = (h * 52) / (100 * 5);
+        var rowStartY = h * 34 / 100;
+        var rowSpacing = (h * 50) / (100 * 5);
 
         // --- Draw countdown header ---
         var countdownText = "";
@@ -169,19 +169,19 @@ class MawaqitWidgetView extends WatchUi.View {
                     8
                 );
 
-                // Prayer label (white, larger font)
+                // Prayer label (white, same font as normal — green bg is the differentiator)
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
                 dc.drawText(
                     leftMargin, rowY,
-                    Graphics.FONT_SMALL,
+                    Graphics.FONT_XTINY,
                     label,
                     Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER
                 );
 
-                // Prayer time (white, larger font)
+                // Prayer time (white)
                 dc.drawText(
                     w / 2, rowY,
-                    Graphics.FONT_SMALL,
+                    Graphics.FONT_XTINY,
                     timeStr,
                     Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
                 );
@@ -191,7 +191,7 @@ class MawaqitWidgetView extends WatchUi.View {
                     dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
                     dc.drawText(
                         rightMargin, rowY,
-                        Graphics.FONT_SMALL,
+                        Graphics.FONT_XTINY,
                         iqamaStr,
                         Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER
                     );
@@ -232,11 +232,11 @@ class MawaqitWidgetView extends WatchUi.View {
     // Matches normal layout structure for visual consistency.
     //
     function drawEmptyState(dc as Graphics.Dc, w as Number, h as Number) as Void {
-        var headerY = h * 15 / 100;
-        var sepY = h * 24 / 100;
+        var headerY = h * 20 / 100;
+        var sepY = h * 28 / 100;
         var leftMargin = w * 12 / 100;
-        var rowStartY = h * 30 / 100;
-        var rowSpacing = (h * 52) / (100 * 5);
+        var rowStartY = h * 34 / 100;
+        var rowSpacing = (h * 50) / (100 * 5);
 
         // Countdown placeholder
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
