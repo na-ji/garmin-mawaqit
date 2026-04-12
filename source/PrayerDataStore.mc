@@ -1,3 +1,4 @@
+import Toybox.Application.Properties;
 import Toybox.Application.Storage;
 import Toybox.Time;
 import Toybox.Time.Gregorian;
@@ -162,9 +163,10 @@ module PrayerDataStore {
     }
 
     //
-    // Convenience check: has a mosque ever been fetched successfully?
+    // Checks if the user has configured a mosque slug in the phone app settings.
     //
     function isMosqueConfigured() as Boolean {
-        return getLastFetchSlug() != null;
+        var slug = Properties.getValue("mosqueSetting") as String or Null;
+        return slug != null && !slug.equals("");
     }
 }
