@@ -43,12 +43,11 @@ Plans:
   2. After Isha, the display rolls over to show next day's Fajr with accurate countdown
   3. Countdown to next prayer updates in real-time showing hours and minutes remaining
   4. Glance view displays next prayer name, scheduled time, and countdown within the 28KB memory budget
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 2 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — PrayerLogic computation module (PRAY-01, PRAY-02, PRAY-03)
+- [ ] 02-02-PLAN.md — GlanceView rendering and timer refresh (GLNC-01, GLNC-02)
 
 ### Phase 3: Widget & Background Service
 **Goal**: Users have a detailed prayer schedule Widget and the app keeps data fresh automatically
@@ -75,5 +74,5 @@ Phases execute in numeric order: 1 -> 2 -> 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Pipeline & Configuration | 0/2 | Planned | - |
-| 2. Prayer Logic & Glance | 0/? | Not started | - |
+| 2. Prayer Logic & Glance | 0/2 | Planned | - |
 | 3. Widget & Background Service | 0/? | Not started | - |
