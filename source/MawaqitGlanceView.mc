@@ -2,6 +2,7 @@ import Toybox.WatchUi;
 import Toybox.Graphics;
 import Toybox.Timer;
 import Toybox.Lang;
+import Toybox.System;
 
 //
 // MawaqitGlanceView: Sunrise-inspired 3-row Glance for prayer times.
@@ -91,6 +92,9 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
 
+        // D-05 fallback: check language once for all hardcoded string conditionals
+        var lang = System.getDeviceSettings().systemLanguage;
+
         // --- Empty state: No mosque configured (D-09) ---
         if (!PrayerDataStore.isMosqueConfigured()) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
@@ -100,7 +104,10 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
                 "Mawaqit",
                 Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER
             );
-            var noMosqueText = WatchUi.loadResource(Rez.Strings.GlanceNoMosque) as String;
+            var noMosqueText = "Set mosque in Connect app";
+            if (lang == System.LANGUAGE_FRE) {
+                noMosqueText = "Configurer dans l'app Connect";
+            }
             dc.drawText(
                 0, 2 * h / 3,
                 Graphics.FONT_SYSTEM_XTINY,
@@ -112,7 +119,7 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
 
         // --- Empty state: No cached data (D-10) ---
         if (!PrayerDataStore.hasCachedData()) {
-            drawEmptyState(dc, w, h);
+            drawEmptyState(dc, w, h, lang);
             return;
         }
 
@@ -121,7 +128,7 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
         var tomorrowTimes = PrayerDataStore.getTomorrowPrayerTimes();
 
         if (todayTimes == null) {
-            drawEmptyState(dc, w, h);
+            drawEmptyState(dc, w, h, lang);
             return;
         }
 
@@ -129,7 +136,7 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
         var state = result["state"] as String;
 
         if (state.equals("no_data")) {
-            drawEmptyState(dc, w, h);
+            drawEmptyState(dc, w, h, lang);
             return;
         }
 
@@ -148,8 +155,12 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
         var bottomY = 3 * h / 4;
 
         // --- Draw top line (D-01, D-04, D-05, D-06, D-07) ---
-        var tokenIn = WatchUi.loadResource(Rez.Strings.CountdownIn) as String;
-        var tokenNow = WatchUi.loadResource(Rez.Strings.CountdownNow) as String;
+        var tokenIn = "in";
+        var tokenNow = "now";
+        if (lang == System.LANGUAGE_FRE) {
+            tokenIn = "dans";
+            tokenNow = "maintenant";
+        }
 
         var topText = "";
         if (state.equals("now")) {
@@ -255,7 +266,7 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
     // Draw the D-10 empty state: "-- in --" top, dim gray bar, "--:--" bottom.
     //
     (:glance)
-    function drawEmptyState(dc as Graphics.Dc, w as Number, h as Number) as Void {
+    function drawEmptyState(dc as Graphics.Dc, w as Number, h as Number, lang as Number) as Void {
         var barHeight = 6;
         var barPadding = 5;
         var barX = barPadding;
@@ -264,7 +275,10 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
         var barY = h / 2 - barHeight / 2;
         var bottomY = 3 * h / 4;
 
-        var placeholderText = WatchUi.loadResource(Rez.Strings.NoDataPlaceholder) as String;
+        var placeholderText = "-- in --";
+        if (lang == System.LANGUAGE_FRE) {
+            placeholderText = "-- dans --";
+        }
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(
             0, topY,
