@@ -105,26 +105,3 @@ class MawaqitWidgetView extends WatchUi.View {
         );
     }
 }
-
-//
-// Stub Glance View -- replaced in Phase 2
-//
-(:glance)
-class MawaqitGlanceView extends WatchUi.GlanceView {
-
-    function initialize() {
-        GlanceView.initialize();
-    }
-
-    (:glance)
-    function onUpdate(dc as Graphics.Dc) as Void {
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(
-            0,
-            dc.getHeight() / 2,
-            Graphics.FONT_GLANCE,
-            "Mawaqit",
-            Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER
-        );
-    }
-}
