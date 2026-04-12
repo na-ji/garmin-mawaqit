@@ -12,20 +12,20 @@ The next prayer time is always one glance away on the wrist — accurate, clear,
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Data fetched from unofficial Mawaqit API — Validated in Phase 1: Data Pipeline & Configuration
+- [x] Mosque configurable via Garmin Connect phone app settings (slug-based) — Validated in Phase 1: Data Pipeline & Configuration
+- [x] Glance shows next prayer name, time, and countdown — Validated in Phase 2: Prayer Logic & Glance
+- [x] After Isha, rolls over to next day's Fajr with countdown — Validated in Phase 2: Prayer Logic & Glance
+- [x] Widget shows full 5-prayer schedule with highlighted next prayer, iqama offsets, and countdown — Validated in Phase 3: Widget & Background Service
+- [x] Targets modern Garmin watches (Connect IQ 4.x+ — Venu, Fenix 7+, Forerunner 265+) — Validated in Phase 3: Widget & Background Service
 
 ### Active
 
-- [ ] Glance shows next prayer name, time, and countdown
-- [ ] Widget shows next prayer name, time, and countdown (larger/more readable)
-- [ ] Data fetched from unofficial Mawaqit API
-- [ ] Mosque configurable via Garmin Connect phone app settings (slug-based)
-- [ ] After Isha, rolls over to next day's Fajr with countdown
-- [ ] Targets modern Garmin watches (Connect IQ 4.x+ — Venu, Fenix 7+, Forerunner 265+)
+(All v1.0 requirements validated)
 
 ### Out of Scope
 
-- Full daily prayer schedule on widget — user wants next prayer only
+- ~~Full daily prayer schedule on widget~~ — Delivered in Phase 3 (Widget shows all 5 prayers)
 - Search/browse mosques on the watch — settings via phone app is sufficient
 - Older device support (CIQ 3.x) — modern devices only for v1
 - Prayer notifications/alarms — display only for now
@@ -75,4 +75,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 after initialization*
+*Last updated: 2026-04-12 after Phase 3 completion — all v1.0 phases complete*
