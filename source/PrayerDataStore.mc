@@ -8,6 +8,7 @@ import Toybox.Lang;
 // MawaqitService writes data to Storage; this module provides read accessors.
 // Phase 2+ views use these functions to get prayer times for display.
 //
+(:glance)
 module PrayerDataStore {
 
     //

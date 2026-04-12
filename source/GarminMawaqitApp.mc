@@ -6,6 +6,7 @@ import Toybox.System;
 import Toybox.Graphics;
 import Toybox.Lang;
 
+(:glance)
 class GarminMawaqitApp extends Application.AppBase {
 
     var _currentSlug as String or Null = null;
@@ -16,9 +17,9 @@ class GarminMawaqitApp extends Application.AppBase {
 
     function onStart(state as Dictionary?) as Void {
         _currentSlug = getMosqueSlug();
-        if (_currentSlug != null) {
-            MawaqitService.fetchPrayerData(_currentSlug);
-        }
+        // Do NOT call MawaqitService here — onStart() runs in glance context
+        // where MawaqitService is not available. Fetch is triggered in
+        // getInitialView() (widget mode only).
     }
 
     function onStop(state as Dictionary?) as Void {
@@ -26,24 +27,25 @@ class GarminMawaqitApp extends Application.AppBase {
     }
 
     function getInitialView() as [Views] or [Views, InputDelegates] {
-        // Stub widget view -- replaced in Phase 3
+        // Trigger data fetch when entering widget mode (not glance mode)
+        if (_currentSlug != null) {
+            MawaqitService.fetchPrayerData(_currentSlug);
+        }
         return [new $.MawaqitWidgetView()] as [Views];
     }
 
     (:glance)
-    function getGlanceView() {
-        return [new $.MawaqitGlanceView()];
+    function getGlanceView() as [WatchUi.GlanceView] or [WatchUi.GlanceView, WatchUi.GlanceViewDelegate] or Null {
+        return [new $.MawaqitGlanceView()] as [WatchUi.GlanceView];
     }
 
     function onSettingsChanged() as Void {
         var newSlug = getMosqueSlug();
         if (newSlug != null && !newSlug.equals(_currentSlug)) {
-            // Mosque slug changed to a new valid value
             _currentSlug = newSlug;
             clearCachedData();
             MawaqitService.fetchPrayerData(newSlug);
         } else if (newSlug == null && _currentSlug != null) {
-            // User cleared the mosque slug
             _currentSlug = null;
             clearCachedData();
         }
