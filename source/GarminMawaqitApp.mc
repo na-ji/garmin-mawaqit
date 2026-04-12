@@ -72,38 +72,3 @@ class GarminMawaqitApp extends Application.AppBase {
     }
 }
 
-//
-// Stub Widget View -- replaced in Phase 3
-//
-class MawaqitWidgetView extends WatchUi.View {
-
-    function initialize() {
-        View.initialize();
-    }
-
-    function onUpdate(dc as Graphics.Dc) as Void {
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.clear();
-
-        // Show fetch status on screen for debugging
-        var slug = Properties.getValue("mosqueSetting") as String or Null;
-        var status = "No mosque";
-        if (slug != null && !slug.equals("")) {
-            status = slug;
-            var times = Storage.getValue("todayTimes");
-            if (times != null) {
-                status = "OK: " + slug;
-            } else {
-                status = "Fetching: " + slug;
-            }
-        }
-
-        dc.drawText(
-            dc.getWidth() / 2,
-            dc.getHeight() / 2,
-            Graphics.FONT_SMALL,
-            status,
-            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
-        );
-    }
-}
