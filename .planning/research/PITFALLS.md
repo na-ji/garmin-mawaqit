@@ -1,112 +1,116 @@
-# Domain Pitfalls
+# Domain Pitfalls: v1.1 Localization & Notifications
 
-**Domain:** Garmin Connect IQ Widget/Glance -- Islamic prayer times with HTTP API
-**Researched:** 2026-04-10
+**Domain:** Adding multi-language support and prayer notifications to existing Garmin Connect IQ widget
+**Researched:** 2026-04-12
+**Scope:** Pitfalls specific to adding localization (French/English) and prayer time notifications to an existing 1,890-line Monkey C app with 28KB glance budget, module pattern architecture, and single temporal event for daily data refresh.
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, app crashes, or store rejection.
+Mistakes that cause rewrites, break the existing working app, or are architecturally impossible to recover from.
 
 ---
 
-### Pitfall 1: Glance 28KB Memory Ceiling Causes Silent Crashes
+### Pitfall 1: Single Temporal Event -- Notification Scheduling Destroys Data Refresh
 
-**What goes wrong:** The Glance view has only ~32KB total memory, of which ~28KB is usable after the VM takes its share. This is shockingly small. The Glance loads ALL code annotated with `:glance` PLUS all code annotated with `:background` PLUS `AppBase` into this 28KB. Developers who share utility classes, data models, or helper functions between Glance and Widget without careful annotation blow through the limit and get `OutOfMemoryError` on real devices -- often while the simulator works fine because it has relaxed limits.
+**What goes wrong:** Connect IQ allows only ONE temporal event registration at a time. `registerForTemporalEvent()` overwrites any previous registration. The existing app registers a once-daily Duration(86400) for background data refresh. Adding notification scheduling (e.g., "vibrate at Fajr time") requires registering a Moment-based temporal event at the exact prayer time. This OVERWRITES the data refresh registration. Now the app vibrates once but never refreshes prayer data again until the user manually opens the widget.
 
-**Why it happens:** Developers treat the Glance as "a smaller Widget" and share code freely. They don't realize the annotation system controls what bytecode gets loaded into the Glance process. Every class, every constant, every string literal annotated `:glance` counts against the 28KB.
+**Why it happens:** Developers think they can schedule multiple background events -- one for data refresh, one per prayer notification. Connect IQ does not support this. There is no event queue, no multiple registrations, no priority system. One registration. Period.
 
-**Consequences:** App crashes immediately on Glance display. Users see "IQ!" error icon. Since modern CIQ 4+ devices show Glances in the carousel, the app appears permanently broken. One-star reviews follow.
+**Consequences:** Either notifications work but data goes stale (no daily refresh), or data refreshes but notifications never fire. The v1.0 daily refresh pattern is incompatible with per-prayer notification timing out of the box.
 
-**Prevention:**
-- Architect from day one: Glance code path must be a SEPARATE, minimal class. Do not reuse Widget view classes.
-- Use `:glance` annotation sparingly -- only on what the Glance truly needs.
-- Create a dedicated `GlanceView` class that reads pre-computed data from `Application.Storage` and renders it. No parsing, no computation, no shared models.
-- Monitor memory in simulator: Settings > Memory > watch peak usage. If Glance peak exceeds 20KB, refactor immediately.
-- Test on real hardware early. Simulator memory limits are often more lenient than real devices.
+**Prevention -- Unified Temporal Event Strategy:**
+1. Switch from Duration-based to Moment-based temporal event registration entirely.
+2. The single temporal event always points to the NEXT interesting time -- whichever comes first: the next prayer notification time OR the next data refresh time.
+3. In `onTemporalEvent()`, determine WHY you woke up:
+   - If it is prayer notification time: call `Background.requestApplicationWake()` with the prayer name message, then re-register for the next event.
+   - If it is data refresh time: make the HTTP request, then in `onBackgroundData()` re-register for the next event.
+4. Store a "schedule" in `Application.Storage`: an array of upcoming events with their type ("notify" or "refresh") and timestamps.
+5. After every temporal event fires, compute and register the next one from the schedule.
+6. Re-register in `onBackgroundData()` (foreground context) -- this is the safe place to call `registerForTemporalEvent()` after background work completes.
 
-**Detection:** Peak memory in simulator approaching 24KB+. Any `OutOfMemoryError` in ERA (crash report) logs. App works in simulator but crashes on device.
+**Critical detail:** The 5-minute minimum interval between temporal events means you CANNOT schedule two prayers that are less than 5 minutes apart (unlikely for actual prayer times, but edge cases exist around Maghrib/Isha in summer). Using a Moment parameter clears the 5-minute restriction on widget startup, but NOT between consecutive background runs.
 
-**Phase:** Must be addressed in Phase 1 (architecture). Cannot be retrofitted easily.
+**Detection:** Data stops refreshing after notification feature is added. Or notifications never fire after a data refresh runs.
 
----
+**Confidence:** HIGH -- single temporal event limitation is documented in official API docs and confirmed across multiple forum threads.
 
-### Pitfall 2: Background Service 30-Second Timeout Kills HTTP Requests Silently
-
-**What goes wrong:** Background temporal events run the background service process, which has a hard 30-second timeout. The HTTP request goes: Watch -> BLE -> Phone -> Internet -> API -> Phone -> BLE -> Watch. If any hop is slow (weak BLE, phone in power-saving mode, API cold start), the 30 seconds expire. The background process terminates BEFORE the HTTP callback fires. No error is returned. No data. No way to tell the user what happened. The app simply shows stale data with no indication of failure.
-
-**Why it happens:** Developers test on simulator where HTTP is instant (localhost). They never encounter the timeout. On real devices, BLE latency alone can eat 5-10 seconds. Add API latency, and 30 seconds becomes tight.
-
-**Consequences:** App appears to "randomly" stop updating. Users see hours-old prayer times. No error message appears because the background process died before it could report one. Debugging is extremely difficult because the failure is silent.
-
-**Prevention:**
-- Design the API proxy (`mawaqit.naj.ovh`) to return minimal JSON. Strip everything except the 5 prayer times and date. Target under 500 bytes of JSON response.
-- Implement a "last updated" timestamp shown in the Widget. Store the timestamp of the last successful fetch in `Application.Storage`. If data is older than the background interval, show a staleness indicator.
-- In the background service, check `System.getDeviceSettings().phoneConnected` before making the request. If false, call `Background.exit(null)` immediately rather than wasting the 30-second window.
-- Handle `onBackgroundData(null)` gracefully in the foreground -- it means the background service failed or timed out.
-
-**Detection:** Prayer times stop updating but no error is visible. "Last updated" timestamp (if implemented) grows stale. Works perfectly in simulator, fails intermittently on device.
-
-**Phase:** Must be addressed in Phase 1 (background service design). The data contract with the API proxy should be locked down early.
+**Phase:** Must be the FIRST thing designed in the notifications phase. The entire notification architecture depends on solving this correctly.
 
 ---
 
-### Pitfall 3: CIQ 4+ App Type Confusion -- Widget Type is Gone
+### Pitfall 2: Attention.vibrate() Cannot Be Called From Background -- Notifications Are Foreground-Only
 
-**What goes wrong:** In Connect IQ 4.0+, the "widget" app type was merged into "watch-app." Building a CIQ 4+ app as type "widget" in manifest.xml actually produces a watch-app. If `getGlanceView()` is not implemented, the app will NOT appear in the Glance carousel on modern devices -- it becomes invisible to the user. Conversely, if built as a watch-app with `getGlanceView()`, it appears in BOTH the glance loop AND the activity/app launcher, which may confuse users who expect it only in glances.
+**What goes wrong:** Developers assume they can vibrate the watch when a temporal event fires at prayer time. They put `Attention.vibrate()` in `onTemporalEvent()` inside the `ServiceDelegate`. This crashes because the Attention module is NOT available in the background context. Garmin staff have explicitly confirmed: "You can only do vibrations in the foreground process."
 
-**Why it happens:** Garmin's documentation still references "widgets" loosely. Developers targeting CIQ 4+ don't realize the widget concept was absorbed. Forum examples and older tutorials show the widget app type, leading to copy-paste errors.
+**Why it happens:** The mental model is "background alarm goes off -> watch vibrates." But Connect IQ's background service is a sandboxed process that can only do HTTP requests and call `Background.exit()`. It cannot interact with the user in any way -- no vibration, no sound, no screen update.
 
-**Consequences:** App installs but users can't find it in the glance carousel. Or app appears in two places (glance + app launcher) causing confusion. Wrong app type means wrong lifecycle behavior.
+**Consequences:** App crashes in background with an error about Attention module not being available. No notification reaches the user.
 
-**Prevention:**
-- Use app type `widget` in manifest.xml (which compiles as watch-app on CIQ 4+ devices automatically).
-- ALWAYS implement `AppBase.getGlanceView()` -- this is mandatory for the app to appear in the glance carousel.
-- Test the full user flow: install -> find in glance loop -> tap to open Widget view -> back to glance.
-- Accept that on CIQ 4+ the app will also appear in the activity launcher. This is normal Garmin behavior for "super apps."
+**The only viable notification approaches for a widget:**
 
-**Detection:** App installs successfully but user cannot find it on the watch. No entry in the glance carousel.
+1. **`Background.requestApplicationWake(message)`** -- Called from `onTemporalEvent()` BEFORE `Background.exit()`. Displays a system-level confirmation dialog: "Launch [App Name]?" with the message. If the user taps "Launch," the widget opens to foreground. Limitation: the user must actively dismiss or accept the dialog. There is NO automatic vibration -- the system dialog may or may not vibrate depending on the device's notification settings. This is the closest thing to a "push notification" for widgets.
 
-**Phase:** Must be correct from Phase 1 (project setup / manifest configuration).
+2. **Foreground vibration via `onBackgroundData()`** -- The `onBackgroundData()` callback runs in the foreground process where `Attention.vibrate()` IS available. However, `onBackgroundData()` only fires when the app is already active (widget view is showing). If the user is on their watch face, `onBackgroundData()` does NOT fire until the next time they view the widget. This makes it useless for time-sensitive prayer notifications.
 
----
+3. **Hybrid approach (recommended):** Use `requestApplicationWake()` for the notification dialog. When the user launches the app from the dialog, `getInitialView()` fires -- detect the "just woke for notification" state from Storage, and call `Attention.vibrate()` there to give haptic feedback.
 
-### Pitfall 4: JSON Response Must Be a Top-Level Object, Not Array
+**Consequences of wrong approach:** Silent notifications that never vibrate. Or notifications that only work when the widget is already on screen.
 
-**What goes wrong:** `Communications.makeWebRequest()` with `HTTP_RESPONSE_CONTENT_TYPE_JSON` requires the JSON response to be a top-level object (dictionary), not an array. If the API returns `[...]` instead of `{...}`, the request fails with error code -400 (invalid response). This is a fundamental Connect IQ limitation with no workaround on the watch side.
+**Confidence:** HIGH -- confirmed by Garmin staff in forum threads and consistent with API documentation showing Attention module supported in "Glance, Watch App, Widget" but NOT "Background."
 
-**Why it happens:** Many REST APIs return arrays at the top level. Developers assume standard JSON parsing. Connect IQ's JSON parser only converts to `Dictionary`, never `Array`, at the top level.
-
-**Consequences:** HTTP requests fail with -400. Developer spends hours debugging thinking it's a network issue. If the Mawaqit API proxy returns an array, every single request will fail.
-
-**Prevention:**
-- The API proxy at `mawaqit.naj.ovh` MUST return a top-level JSON object: `{"fajr": "04:30", "dhuhr": "13:00", ...}` -- never `["04:30", "13:00", ...]`.
-- If the proxy cannot be changed, use `HTTP_RESPONSE_CONTENT_TYPE_TEXT_PLAIN` and parse the response string manually in Monkey C (complex and memory-expensive -- avoid this).
-- Validate the proxy response format early in development before writing any watch-side parsing code.
-
-**Detection:** All HTTP requests return error code -400 despite the URL being correct and reachable.
-
-**Phase:** Must be validated in Phase 1 before any HTTP code is written. The proxy contract is a prerequisite.
+**Phase:** Must be understood before designing notification UX. Set user expectations: notifications will show a dialog, not a silent vibration in the background.
 
 ---
 
-### Pitfall 5: Background.exit() Data Limited to ~8KB
+### Pitfall 3: loadResource(Rez.Strings.*) Permanently Loads ALL Resource Tables Into Glance Memory
 
-**What goes wrong:** The data payload passed from the background service to the foreground via `Background.exit(data)` is limited to approximately 8KB. If the parsed API response (as a Monkey C Dictionary) exceeds this, `Background.exit()` throws an exception, the background process fails, and no data reaches the foreground.
+**What goes wrong:** The first call to `WatchUi.loadResource()` loads the ENTIRE string resource table into application RAM -- not just the requested string, but the table metadata for ALL strings including settings strings. Each resource table entry consumes ~12 bytes. The current app avoids `loadResource()` entirely in the Glance (hardcoded strings like "Fajr", "Dhuhr", etc.). Switching to localized `Rez.Strings` resources for prayer names forces the Glance to pay the resource table tax, eating into the 28KB budget.
 
-**Why it happens:** The 8KB limit is not prominently documented. Developers parse the full API response into a dictionary and pass it through. JSON-to-Dictionary conversion in Monkey C inflates size (hash tables double in size at packing thresholds). A 2KB JSON response can become a 6KB+ Dictionary.
+**Why it happens:** Developers assume loading one string from resources costs only the memory for that string. In reality, the first `loadResource()` call triggers loading the full resource table structure. With the v1.1 settings additions (5 per-prayer toggles, notification timing, language preference), the settings strings alone could add 15-20+ resource table entries.
 
-**Consequences:** Background service silently fails to deliver data. Same symptoms as Pitfall 2 (stale data, no error) but with a different root cause.
+**Memory math for the Glance:**
+- Current approach (hardcoded strings): 0 bytes for resource tables
+- With Rez.Strings: 36 bytes base + (12 bytes x N entries) where N = total string resources across ALL contexts
+- If v1.1 adds 25 string resources (prayer names + settings labels + notification strings): 36 + 300 = 336 bytes minimum
+- Plus the actual string content loaded into memory when accessed
+- In a 28KB budget where the current app may already be at 20-24KB, this can push over the limit
 
 **Prevention:**
-- Keep the API response minimal. For this app: 5 prayer time strings + date = well under 1KB of JSON.
-- In the background service, extract ONLY what the foreground needs before calling `Background.exit()`. Don't pass the raw parsed response. Build a minimal Dictionary: `{"f":"04:30","d":"13:00","a":"16:45","m":"20:15","i":"21:45","dt":"2026-04-10"}`.
-- Alternative: Write data to `Application.Storage` in the background service and pass only a success flag via `Background.exit(true)`. The foreground reads from Storage. This avoids the 8KB limit entirely.
+- **Keep hardcoded strings in the Glance view.** Prayer names ("Fajr", "Dhuhr", etc.) are the same in both English and French -- they are Arabic transliterations, not translated words. The Glance does not need localized strings.
+- **Only use Rez.Strings in the Widget view** (64-128KB budget) where the resource table overhead is negligible.
+- **Localize settings strings** (they load in the phone app context, not on the watch) -- these are free from the watch memory perspective.
+- If the Glance MUST display a translated string (e.g., "in" vs "dans" for the countdown format), use a single conditional based on `System.getDeviceSettings().systemLanguage` with hardcoded alternatives, NOT Rez.Strings.
+- Measure Glance peak memory before and after any resource loading changes.
 
-**Detection:** `Background.exit()` throws an exception (visible in simulator console). Foreground `onBackgroundData()` never fires or receives null.
+**Detection:** Glance crashes with OutOfMemoryError after adding localization. Widget works fine (more memory). Simulator may not catch it.
 
-**Phase:** Phase 1 (background service architecture).
+**Confidence:** HIGH -- resource table memory cost is documented in Garmin forums by Garmin engineers, confirmed with specific byte counts.
+
+**Phase:** Must be addressed in the localization phase. The rule is simple: NO `loadResource()` in Glance-annotated code.
+
+---
+
+### Pitfall 4: Garmin Express Settings Fallback Bug -- Missing Translations Show Blank Settings
+
+**What goes wrong:** When an app declares support for French (`<iq:language>fre</iq:language>` in manifest.xml) but does NOT translate every single settings string into French, Garmin Express fails to fall back to English. Instead, it shows blank text or raw resource IDs for untranslated settings. This is a KNOWN BUG that has persisted since at least 2021 and remains unresolved as of 2025.
+
+**Why it happens:** Garmin Connect Mobile correctly implements resource fallback (missing French string falls back to English base). Garmin Express (desktop) does NOT. The developer tests on their phone and sees correct fallback. Users who configure settings via Garmin Express on desktop see blank fields.
+
+**Consequences:** Users on Garmin Express cannot configure their mosque or notification settings because labels are blank. The app appears broken on desktop.
+
+**Prevention:**
+- **Duplicate EVERY string in EVERY declared language.** If you declare `fre` and `eng`, both `resources/strings/strings.xml` and `resources-fre/strings/strings.xml` must contain identical sets of string IDs with appropriate translations.
+- This includes settings titles, prompts, list entry labels, and any other string referenced in `settings.xml`.
+- Create a checklist during development: for every string ID added to base `strings.xml`, immediately add the French translation to `resources-fre/strings/strings.xml`.
+- Test settings rendering in BOTH Garmin Connect Mobile AND Garmin Express before release.
+
+**Detection:** Settings display correctly on phone but show blank/missing text on Garmin Express desktop.
+
+**Confidence:** HIGH -- known bug, confirmed in Garmin bug reports forum with multiple developers reproducing it. Still not fixed.
+
+**Phase:** Must be enforced from the start of localization work. Missing even one string causes Garmin Express to break.
 
 ---
 
@@ -114,101 +118,150 @@ Mistakes that cause rewrites, app crashes, or store rejection.
 
 ---
 
-### Pitfall 6: Temporal Event 5-Minute Minimum Interval
+### Pitfall 5: Settings Complexity Explosion With Per-Prayer Toggles
 
-**What goes wrong:** Background temporal events cannot fire more frequently than every 5 minutes. Only ONE temporal event can be registered at a time. Developers who want frequent updates (e.g., countdown accuracy) or who try to schedule prayer-specific events find they cannot control timing granularly.
+**What goes wrong:** The v1.1 requirements call for per-prayer notification toggles (5 prayers x on/off) plus notification timing (at time, 5min before, 10min before, 15min before). This adds 5 boolean properties + 1 list property = 6 new settings minimum to the existing 1 setting (mosque slug). If per-prayer timing is desired (different advance warning per prayer), that is 5 list properties instead of 1 = 10 new settings. Each setting needs: a property in `properties.xml`, a setting entry in `settings.xml`, a title string in `strings.xml`, and a French translation in `resources-fre/strings/strings.xml`.
+
+**Why it happens:** Feature creep. "Users want fine-grained control" leads to exponential settings growth.
+
+**Consequences:**
+- Settings UI on phone becomes a long scrolling list that overwhelms users
+- Every property must be read in the background service to determine which prayer to notify for -- increasing background code complexity and memory
+- More strings = more resource table entries = more memory pressure (see Pitfall 3)
+- Each property read via `Properties.getValue()` is a separate call with type casting
+- Bugs multiply: one wrong property key string, one missing default value, one untranslated label
 
 **Prevention:**
-- Accept the 5-minute minimum. Design around it: fetch prayer times once every 15-30 minutes via background service.
-- For countdown accuracy, do NOT rely on background updates. Instead, compute the countdown in `onUpdate()` using `Time.now()` and the stored next-prayer time. The countdown display is a real-time calculation, not a fetched value.
-- Register the next temporal event using a `Time.Moment` (specific time) rather than a `Time.Duration` (interval). For watch-apps/widgets, the 5-minute restriction resets on app startup when using Moments.
+- **Start minimal:** One global "Enable notifications" boolean + one global "Notification timing" list (at time / 5min / 10min / 15min before). This is 2 new settings, not 10.
+- Defer per-prayer toggles to v1.2 only if users request them.
+- If per-prayer toggles ARE needed, consider a single comma-separated property string ("fajr,dhuhr,isha") rather than 5 separate booleans. This reduces settings UI complexity and property count.
+- Use `settings.xml` group elements to visually organize settings on the phone app (if supported by the device's Garmin Connect version).
+- Read all notification settings once in `getInitialView()` and cache in a single Storage dictionary. Do not read Properties in the background service -- pass the computed schedule via Storage instead.
 
-**Phase:** Phase 1 (background service scheduling design).
+**Detection:** Settings screen becomes confusing. Bug reports about "wrong prayer notifying." Localization effort doubles per setting added.
+
+**Confidence:** MEDIUM -- the complexity is predictable, but the exact UX impact depends on implementation choices.
+
+**Phase:** Must be decided during feature design, BEFORE writing any settings or notification code.
 
 ---
 
-### Pitfall 7: Glance Lifecycle Runs Every ~30 Seconds, Full Start-to-Stop
+### Pitfall 6: Hardcoded Prayer Names vs Localized Labels -- Two Different Concerns
 
-**What goes wrong:** The Glance is not a persistent view. Every ~30 seconds, the system runs the FULL lifecycle: `onStart()` -> `getGlanceView()` -> `onLayout()` -> `onShow()` -> `onUpdate()` -> `onHide()` -> `onStop()`. The rendered frame is cached as a bitmap. Developers who put expensive initialization in `onStart()` or `getGlanceView()` (API calls, complex parsing, heavy computation) cause the Glance to lag or fail.
+**What goes wrong:** The current codebase has prayer names hardcoded in two places:
+1. `PrayerLogic.PRAYER_LABELS = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]` -- used for display
+2. `PrayerLogic.PRAYER_KEYS = ["fajr", "dohr", "asr", "maghreb", "icha"]` -- used as API/storage dictionary keys
+
+Developers conflate these and try to localize the KEYS (breaking API compatibility) or forget to localize the LABELS (showing English names to French users). Or they localize labels but break the constant array pattern, forcing dynamic allocation.
+
+**Why it happens:** Prayer names in Islamic context are Arabic transliterations used universally. "Fajr" is "Fajr" in both English and French. But UI text around them ("in", "now", "Set mosque in Connect app") DOES need translation. The boundary between "transliterate" and "translate" is not obvious.
 
 **Prevention:**
-- Glance `onUpdate()` must be ultra-fast: read from `Application.Storage`, format two strings (prayer name + time), draw them. Nothing else.
-- NEVER make HTTP requests from the Glance lifecycle. All data fetching happens in the background service.
-- Pre-compute the "next prayer" in the background service or Widget and store the result. The Glance just reads and displays.
-- Keep Glance code path deterministic and allocation-minimal.
+- **PRAYER_KEYS are NEVER localized.** They are internal identifiers matching the API response. Changing them breaks data parsing.
+- **PRAYER_LABELS stay hardcoded in the Glance** (28KB budget, Arabic transliterations are universal). "Fajr", "Dhuhr", "Asr", "Maghrib", "Isha" need no French translation.
+- **UI chrome text IS localized:** "in" -> "dans", "now" -> "maintenant", "Set mosque in Connect app" -> "Configurez la mosquee dans Connect". These go in Rez.Strings for the Widget view, or use conditional hardcoding for the Glance.
+- **Settings labels ARE localized:** "Enable Fajr notification" -> "Activer notification Fajr". These are phone-side strings that do not affect watch memory.
+- Document explicitly which strings need translation and which do not. Create a translation matrix before starting.
 
-**Phase:** Phase 1 (Glance view implementation).
+**Detection:** API parsing breaks after "localization" (keys were changed). Or French users see English UI chrome alongside Arabic prayer names.
+
+**Confidence:** HIGH -- this is directly visible in the current codebase.
+
+**Phase:** Must be decided at the start of localization work with a clear string inventory.
 
 ---
 
-### Pitfall 8: Simulator vs. Real Device Behavioral Differences
+### Pitfall 7: monkey.jungle Resource Path Configuration Breaks Existing Resources
 
-**What goes wrong:** The Connect IQ Simulator is a simulator, not an emulator. Significant differences exist:
-- Memory limits are often more relaxed in the simulator.
-- `System.getDeviceSettings().isGlanceModeEnabled` is always `false` in the simulator even when Glance mode is configured.
-- HTTP requests are instantaneous in the simulator (no BLE hop).
-- Font rendering and text positioning differ between simulator and real hardware.
-- Background services from previously tested apps can persist in the simulator, causing phantom behavior.
+**What goes wrong:** Adding language-specific resource folders requires modifying `monkey.jungle` to include them in the build. The current `monkey.jungle` is minimal:
+```
+base.resourcePath = resources;resources/drawables;resources/settings;resources/strings
+```
+
+Adding `resources-fre` naively can cause the resource compiler to lose track of existing resources. Known issues include:
+- Language-qualified resource folders overriding device-qualified resource folders
+- Font settings applicable for a device being lost when a language folder is added
+- Resource paths being resolved incorrectly with relative vs absolute paths
+
+**Why it happens:** The Connect IQ resource compiler uses a qualifier priority system. Language qualifiers, device qualifiers, and shape qualifiers can interact in unexpected ways. Documentation on the interaction is sparse. Developers add a `resources-fre` folder and discover their existing drawables or fonts break.
 
 **Prevention:**
-- Test on real hardware as early as possible. Don't wait until "it works in the simulator."
-- Use the simulator for rapid iteration, but validate every milestone on at least one physical device.
-- Reset the simulator between test sessions (File > Reset Simulator) to clear stale background services.
-- Do not rely on `isGlanceModeEnabled` in development logic; detect Glance context by checking which view class is active.
+- **Use the automatic resource resolution system.** Create `resources-fre/strings/strings.xml` alongside the existing `resources/strings/strings.xml`. The resource compiler automatically picks the language-appropriate strings if the folder follows the naming convention `resources-{lang}`.
+- Do NOT manually add `resources-fre` to the `base.resourcePath` in `monkey.jungle` unless automatic resolution fails. The lang qualifier on folder names is the intended mechanism.
+- Test BOTH languages in the simulator (change simulator language via Settings) after adding the French resources.
+- Verify that existing drawables (launcher icon) and properties still load correctly after adding language resources.
+- Keep non-string resources (drawables, properties) in the base `resources/` folder only. Only strings go in `resources-fre/`.
 
-**Phase:** Every phase. Establish device testing practice in Phase 1.
+**Detection:** Build errors about missing resources. Existing icon or settings break after adding French strings. French strings show English text or vice versa.
+
+**Confidence:** MEDIUM -- automatic resolution works for simple cases but the interaction with device qualifiers is poorly documented.
+
+**Phase:** Must be validated early in the localization phase with a test build.
 
 ---
 
-### Pitfall 9: Settings Sync Delay Between Phone and Watch
+### Pitfall 8: requestApplicationWake() Dialog UX is Poor and Uncontrollable
 
-**What goes wrong:** When a user changes the mosque slug in the Garmin Connect mobile app settings, the `onSettingsChanged()` callback on the watch may not fire immediately. The property change requires a Bluetooth sync, which can take 30 seconds to several minutes. In some reported cases, the callback never fires while the app is running, and settings only take effect after restarting the app. Additionally, `onSettingsChanged()` behavior has known bugs where reverted property values display incorrectly in the mobile app for up to a minute.
+**What goes wrong:** `Background.requestApplicationWake(message)` is the only way to "notify" a user from a widget background service. But the UX is not a clean notification -- it is a CONFIRMATION DIALOG that asks "Launch [App Name]?" with the developer's message. The user must tap to open the app. Key issues:
+- No vibration is guaranteed (depends on device notification settings)
+- The dialog may not appear if the user has DND mode enabled
+- On some devices, tapping "Launch" opens the watch face instead of the widget (known bug)
+- The message string is limited and cannot be formatted (no bold, no large text)
+- The dialog disappears if the user does not interact with it within a timeout
+
+**Why it happens:** Connect IQ does not have a proper push notification API for widgets. `requestApplicationWake` was designed as a "hey, open me" mechanism, not a notification system. Developers expect iOS/Android notification quality and get a basic dialog.
 
 **Prevention:**
-- Do not assume `onSettingsChanged()` fires in real time. Always read settings from `Properties.getValue()` on app startup as the primary mechanism.
-- After reading a new mosque slug, validate it (non-null, non-empty) before triggering a data fetch. Show a "Configure mosque in Garmin Connect app" message if the slug is missing.
-- Store the current mosque slug in `Application.Storage` alongside the prayer data. On every background fetch, compare the stored slug to the current property value. If they differ, fetch new data.
-- Test the settings flow: change setting on phone -> sync -> verify watch picks up the change.
+- **Set clear user expectations.** Document that notifications are "soft alerts" -- a dialog will appear that must be acknowledged. This is not a standard phone notification.
+- **Combine with `Background.exit()` data:** Store the prayer name and time in the data passed to `Background.exit()`. In `onBackgroundData()`, if the app happens to be in the foreground, call `Attention.vibrate()` for immediate haptic feedback. This covers the case where the user is already looking at the widget.
+- **Keep the wake message concise and useful:** "Fajr 04:30" is better than "It's time for Fajr prayer at 04:30 AM."
+- **Test DND mode behavior** on target devices -- some devices suppress requestApplicationWake dialogs entirely in DND.
+- Consider adding a note in the app's Connect IQ Store description about notification behavior so users know what to expect.
 
-**Phase:** Phase 2 (settings integration). But the validation logic belongs in Phase 1 architecture.
+**Detection:** Users report "notifications don't work" when they mean "I didn't see/hear anything." The dialog appeared but they missed it.
+
+**Confidence:** HIGH -- requestApplicationWake behavior is well-documented and its limitations are widely discussed in forums.
+
+**Phase:** Must be understood during UX design for notifications. Do not promise "alerts" if the platform only supports "dialogs."
 
 ---
 
-### Pitfall 10: Isha-to-Fajr Rollover Across Midnight
+### Pitfall 9: Temporal Event Re-Registration Race Condition After Background Exit
 
-**What goes wrong:** After Isha (the last prayer), the app must show tomorrow's Fajr with an accurate countdown. This requires:
-1. Having tomorrow's prayer times available (today's Fajr is already past).
-2. Correctly handling the date boundary at midnight.
-3. Handling edge cases: What if the background service hasn't fetched tomorrow's data yet? What if it's 11:55 PM and the next fetch is at 12:10 AM?
+**What goes wrong:** After a background temporal event fires and `onTemporalEvent()` completes with `Background.exit(data)`, the foreground receives data in `onBackgroundData()`. The developer wants to register the NEXT temporal event from `onBackgroundData()`. But there is a race: if the app is not currently in the foreground (widget not visible), `onBackgroundData()` may be deferred or batched. Meanwhile, no temporal event is registered, so no future events fire. The notification schedule dies.
 
-Developers who only store today's 5 prayer times hit a dead end after Isha. The countdown shows negative time or "no next prayer."
+**Why it happens:** The developer assumes `onBackgroundData()` fires immediately and synchronously after `Background.exit()`. In practice, the foreground callback timing depends on whether the app is visible, whether the system is busy, and device-specific behavior.
 
 **Prevention:**
-- Always fetch and store at least TWO days of prayer times: today and tomorrow. The API proxy should support this (or the watch fetches twice).
-- Alternatively, have the API proxy return tomorrow's Fajr time as a 6th field in the response.
-- Implement the next-prayer logic as: scan today's times, if all are past, use tomorrow's Fajr. If tomorrow's Fajr is also past (shouldn't happen), show a "refreshing..." state.
-- Schedule a background fetch shortly after midnight to refresh the day's data.
+- **Register the next temporal event BEFORE calling `Background.exit()` from `onTemporalEvent()`.** The `registerForTemporalEvent()` call works from the background service context. This ensures the next event is always scheduled regardless of foreground state.
+- Compute the next event Moment in the background service using stored prayer times from Storage. The background service CAN read from `Application.Storage`.
+- Use `onBackgroundData()` only for UI updates and optional vibration -- NOT for critical scheduling decisions.
+- Store the "next event plan" in Storage so both background and foreground can read it. If the foreground needs to override (e.g., user changed notification settings), it can re-register in `onSettingsChanged()`.
 
-**Detection:** App shows no prayer or negative countdown after Isha. App shows incorrect prayer at midnight boundary.
+**Detection:** Notifications work once then stop. Or the schedule becomes progressively wrong after the first event.
 
-**Phase:** Phase 1 (core prayer logic). This is a fundamental data model decision.
+**Confidence:** MEDIUM -- the exact timing of `onBackgroundData()` depends on device and firmware version. The "register before exit" approach is a documented safe pattern.
+
+**Phase:** Must be solved in notification scheduling implementation.
 
 ---
 
-### Pitfall 11: Unofficial API Instability and Availability
+### Pitfall 10: manifest.xml Language Declaration Without Complete Resources Breaks Build
 
-**What goes wrong:** The Mawaqit API at `mawaqit.naj.ovh` is unofficial and self-hosted. It could go down, change its response format, or become rate-limited without notice. The official Mawaqit API is private and not publicly available. Building a watch app that depends entirely on an unofficial proxy creates a single point of failure.
+**What goes wrong:** Adding `<iq:language>fre</iq:language>` to `manifest.xml` tells the resource compiler to expect French resources. If the `resources-fre/strings/strings.xml` file is missing or incomplete, the build may succeed but the app will show resource IDs instead of text when the device language is French. Combined with the Garmin Express fallback bug (Pitfall 4), this creates invisible failures.
+
+**Why it happens:** The manifest language declaration is a commitment. It tells the system "this app supports French." If the actual resources do not back up that claim, behavior is undefined.
 
 **Prevention:**
-- Design the watch app to be resilient to API failure. Cache the last successful response in `Application.Storage` with a timestamp. Show cached data with a staleness indicator rather than showing nothing.
-- Keep the API response contract simple and documented so the proxy can be rehosted or replaced quickly.
-- Consider adding a fallback: if the primary proxy is down for extended periods, show cached data with a clear "offline" indicator.
-- The proxy should be stateless and simple enough to deploy anywhere (Vercel, Cloudflare Workers, etc.) in under an hour if the current host fails.
-- Document the expected JSON contract in the project so any replacement proxy knows exactly what to return.
+- Add the `<iq:language>fre</iq:language>` declaration AND create `resources-fre/strings/strings.xml` with ALL string translations in the SAME commit. Never one without the other.
+- Create a build verification step: after adding French support, build the app and switch the simulator to French. Verify every screen and every settings page shows correct text.
+- Use the existing `resources/strings/strings.xml` as the English base. Copy it to `resources-fre/strings/strings.xml` and translate the values. Same IDs, different values.
 
-**Detection:** HTTP requests return non-200 status codes. Prayer times stop updating for hours/days.
+**Detection:** French users see `"MosqueSettingTitle"` literal text instead of the translated label.
 
-**Phase:** Phase 1 (API proxy contract) and ongoing operational concern.
+**Confidence:** HIGH -- standard resource compiler behavior, documented.
+
+**Phase:** First step of localization implementation. Atomic commit: manifest + resources together.
 
 ---
 
@@ -216,103 +269,124 @@ Developers who only store today's 5 prayer times hit a dead end after Isha. The 
 
 ---
 
-### Pitfall 12: Monkey C Type Checker Quirks at Strict Level
+### Pitfall 11: PrayerLogic.formatCountdown() Has Hardcoded English Strings
 
-**What goes wrong:** Monkey C's type checker at `strict` level has known issues: it doesn't treat `&&` as short-circuiting for null checks (requiring nested `if` statements), incorrectly infers types on container access, and breaks with the `has` keyword in background-annotated code. Developers enabling strict mode spend excessive time fighting the type checker rather than building features.
+**What goes wrong:** The current `formatCountdown()` function builds strings like `"Fajr in 2h 15m"` and `"Asr now"` using hardcoded English prepositions ("in", "now"). Localizing these requires changing the function signature or string building logic.
 
 **Prevention:**
-- Use type check level 2 (gradual) instead of strict for development velocity. Gradual provides most benefits without the false positives.
-- Where the type checker fights you, use `:typecheck(false)` on specific functions as a targeted escape hatch.
-- Use explicit `as` casts for Dictionary values from API responses and Storage reads.
+- For the **Widget view** (has memory for Rez.Strings): load localized format strings and use them in a new `formatCountdownLocalized()` variant.
+- For the **Glance view** (no Rez.Strings): use `System.getDeviceSettings().systemLanguage` to check if the language is French. French uses `Toybox.WatchUi.LANG_FRE` constant (value 7). Hardcode the two variants: `"in"/"now"` for English, `"dans"/"maintenant"` for French. Only 4 extra string constants, no resource loading.
+- PRAYER_LABELS ("Fajr", "Dhuhr", etc.) do NOT change between English and French -- they are universal Arabic transliterations.
+- Keep the existing `formatCountdown()` as-is for backward compatibility. Add a new localization-aware wrapper.
 
-**Phase:** Phase 1 (project configuration).
+**Detection:** French users see "Asr in 2h 15m" instead of "Asr dans 2h 15m."
+
+**Confidence:** HIGH -- directly visible in the codebase.
+
+**Phase:** Localization phase, after the resource structure is set up.
 
 ---
 
-### Pitfall 13: Widget Memory is Separate and Larger, But Still Limited
+### Pitfall 12: Attention Module Requires has-Check and Permission
 
-**What goes wrong:** The Widget (full view when user taps the Glance) has more memory than the Glance (~64-128KB depending on device) but is still limited compared to any modern platform. Developers who build complex multi-screen UIs, load images, or keep large data structures in memory hit the ceiling.
+**What goes wrong:** Not all Garmin devices support all Attention module features. Calling `Attention.vibrate()` without checking `Attention has :vibrate` crashes on devices without vibration hardware. Additionally, some Forerunner devices do not support vibration duty cycle patterns -- vibrations always run at a fixed strength.
 
 **Prevention:**
-- The Widget for this app is simple: display next prayer name, time, and countdown. This should comfortably fit in any Widget memory budget.
-- Avoid loading bitmap resources. Use text rendering only.
-- Release references to data structures when not needed (set to `null`).
-- Monitor peak memory in the simulator for Widget mode separately from Glance mode.
+- Always guard with `if (Attention has :vibrate)` before calling `Attention.vibrate()`.
+- Use a simple vibration profile: one `VibeProfile(100, 500)` (100% duty cycle, 500ms duration). Do not rely on complex multi-step patterns that may not work on all devices.
+- Consider also checking `Attention has :playTone` for an audible alert as a complement to vibration.
+- The manifest already declares `PushNotification` permission. Verify that no additional permission is needed for Attention module (it should work with existing permissions for widget apps).
 
-**Phase:** Phase 1 (Widget view implementation).
+**Detection:** Crash on specific device models when vibration is triggered. Silent failure on devices that lack vibration hardware.
+
+**Confidence:** HIGH -- documented in Attention API docs with explicit recommendation for has-checks.
+
+**Phase:** Notification implementation phase.
 
 ---
 
-### Pitfall 14: requestUpdate() Frequency and Battery Drain
+### Pitfall 13: Background Service Memory Pressure From Notification Logic
 
-**What goes wrong:** Calling `WatchUi.requestUpdate()` triggers a screen redraw. In the Widget view, using a `Timer` to call `requestUpdate()` every second (for a countdown) works but drains battery faster than necessary. Every redraw costs power.
+**What goes wrong:** The background service (`:background` annotated code) shares the same 28KB budget with the Glance. Adding notification scheduling logic to the background service -- computing next prayer time, comparing against notification settings, deciding whether to call `requestApplicationWake()` -- increases the code and data loaded into this constrained context.
+
+**Why it happens:** The existing `MawaqitServiceDelegate` is lean (53 lines, one HTTP request). Adding notification logic requires: reading prayer times from Storage, reading notification preferences from Properties, computing time comparisons, conditional wake requests. Each line of code and each variable consumes memory in the 28KB space.
 
 **Prevention:**
-- Update the countdown every 1 second only when the Widget is visible (active in `onShow()`, stopped in `onHide()`).
-- For the Glance, do NOT use a timer. The system controls Glance refresh (~30 seconds). Just render whatever is current in `onUpdate()`.
-- Consider updating every 10-15 seconds in the Widget if sub-minute countdown precision isn't critical. Even every-minute updates are acceptable since prayer times change on 1-minute boundaries.
-- Stop the timer in `onHide()` without fail. Forgetting this is a common battery drain source.
+- Keep the background service delegate as lean as possible. Pre-compute the "next notification Moment" in the FOREGROUND (in `onBackgroundData()` or `getInitialView()`) and store it in Storage.
+- The background service only needs to: (1) read the pre-computed next event from Storage, (2) compare against current time, (3) call `requestApplicationWake()` if it matches, (4) optionally make HTTP request if it is a refresh event, (5) `Background.exit()`.
+- Do NOT put prayer time parsing logic in background-annotated code. The foreground computes, the background executes.
+- Monitor background memory separately from Glance memory. They share the same pool.
 
-**Phase:** Phase 1 (Widget view timer management).
+**Detection:** Glance crashes with OutOfMemoryError after notification code is added (the background code increased the shared memory footprint).
+
+**Confidence:** HIGH -- memory sharing between background and glance is documented and was a key architectural decision in v1.0.
+
+**Phase:** Notification implementation phase. Lean background delegate is a hard requirement.
 
 ---
 
-### Pitfall 15: Store Submission and Permissions
+### Pitfall 14: System Language Detection API Nuances
 
-**What goes wrong:** The Connect IQ Store review process can reject apps for unclear reasons. Common issues: missing permissions in manifest (Communications permission for HTTP), supporting devices the app wasn't tested on, vague app descriptions, or using trademarked terms.
+**What goes wrong:** `System.getDeviceSettings().systemLanguage` returns a numeric constant, not a string. The mapping is: `WatchUi.LANG_ENG = 2`, `WatchUi.LANG_FRE = 7`. Developers may check for the wrong value, use string comparison, or forget that the user's watch language may be NEITHER English nor French (e.g., Arabic, German). The app must handle unsupported languages gracefully.
 
 **Prevention:**
-- Declare `Communications` permission in manifest.xml.
-- Declare `Background` permission for background temporal events.
-- Only list devices you have tested (or at minimum, tested in the simulator with correct memory constraints).
-- Write a clear app description mentioning it connects to an external API for prayer times.
-- Do not use the word "Mawaqit" as a trademark in the app name without checking usage rights. Consider a generic name like "Prayer Times" or "Salat Widget."
+- Check for French explicitly: `if (System.getDeviceSettings().systemLanguage == WatchUi.LANG_FRE)`. Fall back to English for ALL other languages.
+- Do NOT try to enumerate every possible language. The fallback is always English.
+- The Rez.Strings resource system handles this automatically for the Widget (French folder exists, everything else falls back to base). But for Glance hardcoded strings, you must code the conditional manually.
+- Test with the simulator set to a THIRD language (e.g., German) to verify fallback works.
 
-**Phase:** Final phase (store submission).
+**Detection:** App shows wrong language for unexpected system language settings. Or crashes on numeric comparison error.
+
+**Confidence:** HIGH -- API is documented, but the numeric constant format surprises developers expecting string codes.
+
+**Phase:** Early localization phase. Simple but must be done correctly.
 
 ---
 
 ## Phase-Specific Warnings
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Project setup / manifest | Pitfall 3: Wrong app type for CIQ 4+ | Use widget type, implement `getGlanceView()` |
-| API proxy contract | Pitfall 4: JSON must be top-level object | Validate proxy returns `{...}` not `[...]` |
-| API proxy contract | Pitfall 11: Unofficial API instability | Document response contract, keep proxy simple and portable |
-| Background service | Pitfall 2: 30-second timeout kills requests | Minimal JSON payload, phone-connected check |
-| Background service | Pitfall 5: 8KB exit data limit | Pass minimal dict or use Storage |
-| Background service | Pitfall 6: 5-minute minimum interval | Use Moments, compute countdown locally |
-| Glance implementation | Pitfall 1: 28KB memory ceiling | Separate minimal GlanceView, read-only from Storage |
-| Glance implementation | Pitfall 7: Full lifecycle every 30s | Ultra-fast onUpdate, no computation |
-| Widget implementation | Pitfall 14: Battery drain from frequent updates | Timer discipline, stop in onHide |
-| Prayer time logic | Pitfall 10: Isha-to-Fajr rollover | Store two days of data, scan-and-rollover logic |
-| Settings | Pitfall 9: Sync delay from phone | Read on startup, validate slug, compare-and-fetch |
-| Testing | Pitfall 8: Simulator vs real device | Test on hardware every phase |
-| Store submission | Pitfall 15: Rejection risks | Correct permissions, tested devices, clear description |
+| Phase Topic | Likely Pitfall | Severity | Mitigation |
+|-------------|---------------|----------|------------|
+| Notification architecture design | Pitfall 1: Single temporal event conflict | CRITICAL | Unified event scheduler: always point to next interesting Moment |
+| Notification architecture design | Pitfall 2: No background vibration | CRITICAL | Use requestApplicationWake + foreground vibration hybrid |
+| Notification scheduling | Pitfall 9: Re-registration race condition | MODERATE | Register next event in background BEFORE exit, not in onBackgroundData |
+| Notification UX | Pitfall 8: Poor dialog UX | MODERATE | Set expectations, keep messages concise, test DND mode |
+| Notification settings | Pitfall 5: Settings explosion | MODERATE | Start with 2 global settings, defer per-prayer toggles |
+| Localization resource setup | Pitfall 4: Garmin Express fallback bug | CRITICAL | Duplicate ALL strings in ALL declared languages |
+| Localization resource setup | Pitfall 7: monkey.jungle resource paths | MODERATE | Use automatic lang-qualified folder resolution |
+| Localization resource setup | Pitfall 10: Manifest without resources | MODERATE | Atomic commit: manifest + resources together |
+| Localization Glance view | Pitfall 3: loadResource memory in Glance | CRITICAL | NO Rez.Strings in Glance, use conditional hardcoded strings |
+| Localization Widget view | Pitfall 6: Hardcoded vs localized labels | MODERATE | Prayer names stay hardcoded, UI chrome gets localized |
+| Localization countdown format | Pitfall 11: Hardcoded English strings | MINOR | Conditional "in"/"dans" based on systemLanguage |
+| Notification implementation | Pitfall 12: Attention has-check | MINOR | Guard all Attention calls with has-check |
+| Notification implementation | Pitfall 13: Background memory pressure | MODERATE | Pre-compute in foreground, lean background delegate |
+| Localization testing | Pitfall 14: System language detection | MINOR | Check for FRE, fall back to ENG for everything else |
+
+---
+
+## Integration Risk Summary
+
+The two features (localization and notifications) have an important interaction: localization adds string resources that increase memory pressure (Pitfall 3), while notifications add background logic that increases background memory (Pitfall 13). Both share the same 28KB glance/background budget. Adding them simultaneously without monitoring memory at each step risks a combined overflow that is hard to attribute to either feature alone.
+
+**Recommended approach:** Add localization FIRST (lower risk, no architectural changes), verify Glance memory is still within budget, THEN add notifications (higher risk, architectural change to temporal event system). Do not develop both in parallel.
 
 ---
 
 ## Sources
 
-- [Garmin Developer: Glances Core Topic](https://developer.garmin.com/connect-iq/core-topics/glances/)
-- [Garmin Developer: App Types](https://developer.garmin.com/connect-iq/connect-iq-basics/app-types/)
-- [Garmin Developer: Background Service FAQ](https://developer.garmin.com/connect-iq/connect-iq-faq/how-do-i-create-a-connect-iq-background-service/)
-- [Garmin Developer: HTTPS / JSON REST Requests](https://developer.garmin.com/connect-iq/core-topics/https/)
-- [Garmin Developer: Toybox.Background Module](https://developer.garmin.com/connect-iq/api-docs/Toybox/Background.html)
-- [Garmin Developer: Objects and Memory](https://developer.garmin.com/connect-iq/monkey-c/objects-and-memory/)
-- [Garmin Developer: Persisting Data](https://developer.garmin.com/connect-iq/core-topics/persisting-data/)
-- [Garmin Developer: Properties and App Settings](https://developer.garmin.com/connect-iq/core-topics/properties-and-app-settings/)
-- [Garmin Developer: App Review Guidelines](https://developer.garmin.com/connect-iq/app-review-guidelines/)
-- [Forum: Glance Views Out of Memory](https://forums.garmin.com/developer/connect-iq/f/discussion/210767/glance-views-out-of-memory)
-- [Forum: Background Process Exits Before Timeout](https://forums.garmin.com/developer/connect-iq/i/bug-reports/background-process-exits-before-makewebrequest-times-out)
-- [Forum: Understanding -402 Response Limit](https://forums.garmin.com/developer/connect-iq/f/discussion/414966/understanding--402-response-limit-for-makewebrequest)
-- [Forum: onBackgroundData Not Called](https://forums.garmin.com/developer/connect-iq/f/discussion/324155/onbackgrounddata-not-called/1574861)
-- [Forum: How to Hand Over Data to Background Service](https://forums.garmin.com/developer/connect-iq/f/discussion/358782/how-to-hand-over-data-to-a-background-service)
-- [Forum: Background Temporal Event](https://forums.garmin.com/developer/connect-iq/f/discussion/5443/background-temporal-event)
-- [Forum: Widget onShow Not Called Always](https://forums.garmin.com/developer/connect-iq/i/bug-reports/widget-onshow-is-not-called-always-on-some-devices)
-- [Forum: Settings Sync Issues](https://forums.garmin.com/developer/connect-iq/i/bug-reports/watch-face-settings-not-updated-synced-correctly-in-the-connect-iq-mobile-apps-after-performing-settings-change)
-- [Forum: Strict Type Checker Issues](https://forums.garmin.com/developer/connect-iq/b/news-announcements/posts/the-road-to-strict-typing-is-paved-with-good-intentions)
-- [Forum: JSON Array Parsing](https://forums.garmin.com/developer/connect-iq/f/discussion/1604/parsing-as-json-array)
-- [Forum: Simulator vs Real Device](https://forums.garmin.com/developer/connect-iq/f/discussion/5430/code-tuning-and-differences-between-simulator-and-real-devices)
-- [Garmin Blog: Improve App Performance](https://www.garmin.com/en-US/blog/developer/improve-your-app-performance/)
-- [Mawaqit Help: API Availability](https://help.mawaqit.net/en/articles/11991838-can-i-use-your-api)
+- [Garmin Developer: Toybox.Background Module](https://developer.garmin.com/connect-iq/api-docs/Toybox/Background.html) -- single temporal event limitation, requestApplicationWake, 5-minute minimum
+- [Garmin Developer: Toybox.Attention Module](https://developer.garmin.com/connect-iq/api-docs/Toybox/Attention.html) -- supported app types (widget yes, background no), vibrate API, has-check
+- [Garmin Developer: Resources Core Topic](https://developer.garmin.com/connect-iq/core-topics/resources/) -- resource compiler, language-qualified folders
+- [Garmin Developer: Build Configuration](https://developer.garmin.com/connect-iq/core-topics/build-configuration/) -- monkey.jungle resource paths, language qualifiers
+- [Garmin Developer: Properties and App Settings](https://developer.garmin.com/connect-iq/core-topics/properties-and-app-settings/) -- settings.xml configuration
+- [Garmin Developer: Localization Guidelines](https://developer.garmin.com/connect-iq/user-experience-guidelines/localization/) -- supported language codes (ISO 639-2: fre for French, eng for English)
+- [Forum: Triggering vibrations in the background](https://forums.garmin.com/developer/connect-iq/f/discussion/357743/triggering-vibrations-in-the-background) -- confirmed: "can only do vibrations in the foreground process"
+- [Forum: Feature request: vibration from background process](https://forums.garmin.com/developer/connect-iq/f/discussion/5130/feature-request-vibration-from-watchface-and-or-vibration-from-background-process) -- requestApplicationWake as workaround
+- [Forum: Conditional onTemporalEvent and requestApplicationWake](https://forums.garmin.com/developer/connect-iq/f/discussion/232368/conditional-ontemporalevent-and-requestapplicationwake-for-user-interaction) -- wake dialog mechanics, "Launch" button behavior
+- [Forum: Garmin Express does not implement fallback to default language](https://forums.garmin.com/developer/connect-iq/i/bug-reports/garmin-express-does-not-implement-fallback-to-default-language-english-resources) -- known unfixed bug since 2021
+- [Forum: Resources/Strings available languages](https://forums.garmin.com/developer/connect-iq/f/discussion/290576/resources-strings-available-languages) -- supported language codes, simulator limitations
+- [Forum: Localization, jungle files, screen size/devices](https://forums.garmin.com/developer/connect-iq/f/discussion/261219/localization-jungle-files-screen-size-devices) -- resource path conflicts with language folders
+- [Forum: WatchUI.loadResource() overhead](https://forums.garmin.com/developer/connect-iq/f/discussion/5470/watchui-loadresource-overhead) -- resource table memory cost (36 bytes base + 12 per entry)
+- [Forum: loadResource mem usage](https://forums.garmin.com/developer/connect-iq/f/discussion/224423/loadresource-mem-usage) -- ALL resource tables load on first loadResource call
+- [Forum: registerForTemporalEvent update problem](https://forums.garmin.com/developer/connect-iq/f/discussion/408958/background-registerfortemporalevent-update-problem/1922819) -- double registration overwrite behavior
+- [Forum: Background temporal event](https://forums.garmin.com/developer/connect-iq/f/discussion/5443/background-temporal-event) -- Moment vs Duration, 5-minute restriction behavior
