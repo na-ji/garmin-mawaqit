@@ -33,9 +33,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Widget
 
-- [ ] **WDGT-01**: Widget shows all 5 daily prayers with next prayer highlighted
-- [ ] **WDGT-02**: Widget shows iqama times alongside prayer times
-- [ ] **WDGT-03**: Widget displays visual progress indicator between prayers
+- [x] **WDGT-01**: Widget shows all 5 daily prayers with next prayer highlighted
+- [x] **WDGT-02**: Widget shows iqama times alongside prayer times
+- [x] **WDGT-03**: Widget displays visual progress indicator between prayers
 
 ### Background Service
 
@@ -87,9 +87,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRAY-03 | Phase 2 | Complete |
 | GLNC-01 | Phase 2 | Pending |
 | GLNC-02 | Phase 2 | Pending |
-| WDGT-01 | Phase 3 | Pending |
-| WDGT-02 | Phase 3 | Pending |
-| WDGT-03 | Phase 3 | Pending |
+| WDGT-01 | Phase 3 | Complete |
+| WDGT-02 | Phase 3 | Complete |
+| WDGT-03 | Phase 3 | Complete |
 | BKGD-01 | Phase 3 | Pending |
 | BKGD-02 | Phase 3 | Pending |
 
