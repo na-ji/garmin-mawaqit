@@ -39,7 +39,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- String resource infrastructure, manifest language, PrayerLogic localization, Glance view localization
+- [x] 04-01-PLAN.md -- String resource infrastructure, manifest language, PrayerLogic localization, Glance view localization
 - [ ] 04-02-PLAN.md -- Widget view localization and visual verification checkpoint
 
 **UI hint**: yes

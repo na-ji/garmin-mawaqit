@@ -9,11 +9,11 @@ Requirements for localization and notifications milestone. Each maps to roadmap 
 
 ### Localization
 
-- [ ] **LOC-01**: App auto-detects device language and displays UI in French or English
-- [ ] **LOC-02**: All Glance UI strings (next prayer label, countdown prefix, empty states) display in the detected language
+- [x] **LOC-01**: App auto-detects device language and displays UI in French or English
+- [x] **LOC-02**: All Glance UI strings (next prayer label, countdown prefix, empty states) display in the detected language
 - [ ] **LOC-03**: All Widget UI strings (header, prayer labels, empty states) display in the detected language
-- [ ] **LOC-04**: All phone app settings labels display in the detected language
-- [ ] **LOC-05**: App falls back to English when device language is neither French nor English
+- [x] **LOC-04**: All phone app settings labels display in the detected language
+- [x] **LOC-05**: App falls back to English when device language is neither French nor English
 
 ### Notifications
 
@@ -53,11 +53,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOC-01 | Phase 4 | Pending |
-| LOC-02 | Phase 4 | Pending |
+| LOC-01 | Phase 4 | Complete |
+| LOC-02 | Phase 4 | Complete |
 | LOC-03 | Phase 4 | Pending |
-| LOC-04 | Phase 4 | Pending |
-| LOC-05 | Phase 4 | Pending |
+| LOC-04 | Phase 4 | Complete |
+| LOC-05 | Phase 4 | Complete |
 | NOTIF-01 | Phase 5 | Pending |
 | NOTIF-02 | Phase 5 | Pending |
 | NOTIF-03 | Phase 5 | Pending |
