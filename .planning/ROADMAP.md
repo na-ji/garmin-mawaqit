@@ -36,7 +36,12 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   2. User with a French-language device sees all Widget text (header, prayer schedule, empty states) in French
   3. User with a French-language device sees all phone app settings labels in French
   4. User with a device language other than French or English sees all text in English (fallback)
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md -- String resource infrastructure, manifest language, PrayerLogic localization, Glance view localization
+- [ ] 04-02-PLAN.md -- Widget view localization and visual verification checkpoint
+
 **UI hint**: yes
 
 ### Phase 5: Prayer Notifications
@@ -61,5 +66,5 @@ Phases execute in numeric order: 4 -> 5
 | 1. Data Pipeline & Configuration | v1.0 | 2/2 | Complete | 2026-04-11 |
 | 2. Prayer Logic & Glance | v1.0 | 2/2 | Complete | 2026-04-12 |
 | 3. Widget & Background Service | v1.0 | 2/2 | Complete | 2026-04-12 |
-| 4. Multi-Language Support | v1.1 | 0/? | Not started | - |
+| 4. Multi-Language Support | v1.1 | 0/2 | Planned | - |
 | 5. Prayer Notifications | v1.1 | 0/? | Not started | - |
