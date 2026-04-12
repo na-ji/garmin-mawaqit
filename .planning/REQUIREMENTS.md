@@ -22,9 +22,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Prayer Logic
 
-- [ ] **PRAY-01**: App calculates the next prayer from current time
-- [ ] **PRAY-02**: After Isha, app rolls over to show next day's Fajr with countdown
-- [ ] **PRAY-03**: Countdown updates in real-time (minutes/hours remaining)
+- [x] **PRAY-01**: App calculates the next prayer from current time
+- [x] **PRAY-02**: After Isha, app rolls over to show next day's Fajr with countdown
+- [x] **PRAY-03**: Countdown updates in real-time (minutes/hours remaining)
 
 ### Glance
 
@@ -82,9 +82,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-05 | Phase 1 | Complete |
 | CONF-01 | Phase 1 | Complete |
 | CONF-02 | Phase 1 | Complete |
-| PRAY-01 | Phase 2 | Pending |
-| PRAY-02 | Phase 2 | Pending |
-| PRAY-03 | Phase 2 | Pending |
+| PRAY-01 | Phase 2 | Complete |
+| PRAY-02 | Phase 2 | Complete |
+| PRAY-03 | Phase 2 | Complete |
 | GLNC-01 | Phase 2 | Pending |
 | GLNC-02 | Phase 2 | Pending |
 | WDGT-01 | Phase 3 | Pending |

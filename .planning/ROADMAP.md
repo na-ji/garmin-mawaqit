@@ -46,7 +46,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — PrayerLogic computation module (PRAY-01, PRAY-02, PRAY-03)
+- [x] 02-01-PLAN.md — PrayerLogic computation module (PRAY-01, PRAY-02, PRAY-03)
 - [ ] 02-02-PLAN.md — GlanceView rendering and timer refresh (GLNC-01, GLNC-02)
 
 ### Phase 3: Widget & Background Service
