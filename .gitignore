@@ -3,3 +3,4 @@ output
 bin
 .history
 build
+.claude/settings.local.json

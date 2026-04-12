@@ -31,14 +31,20 @@ The next prayer time is always one glance away on the wrist — accurate, clear,
 - Prayer notifications/alarms — display only for now
 - Compass/Qibla direction — separate concern
 
+## Current State
+
+Shipped v1.0 as Connect IQ Store beta (2026-04-12). 1,890 lines of Monkey C across 7 source files. Tested on real Garmin watch.
+
 ## Context
 
 - **API**: Unofficial Mawaqit API at `https://mawaqit.naj.ovh/api/v1/{mosque-slug}/`
 - **Example slug**: `tawba-bussy-saint-georges`
-- **Platform**: Garmin Connect IQ SDK, Monkey C language
+- **Platform**: Garmin Connect IQ SDK 8.4.0, Monkey C language
 - **Target CIQ version**: 4.x+ (modern devices only)
 - **App types**: Glance + Widget (both showing next prayer)
 - **5 daily prayers**: Fajr, Dhuhr, Asr, Maghrib, Isha
+- **Architecture**: Module pattern (PrayerLogic, PrayerDataStore, MawaqitService) + View classes
+- **Memory budgets**: Glance 28KB (shared with background), Widget 64-128KB
 
 ## Constraints
 
@@ -52,10 +58,14 @@ The next prayer time is always one glance away on the wrist — accurate, clear,
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Next prayer only (not all 5) | Keep display focused and glanceable | — Pending |
-| Mosque via phone app settings | Simpler than on-watch search, slug-based API | — Pending |
-| Modern devices only (CIQ 4.x+) | Simpler development, better APIs available | — Pending |
-| Roll to Fajr after Isha | Always show actionable next prayer | — Pending |
+| Glance: next prayer only; Widget: all 5 | Glance stays focused, Widget gives full schedule | Good |
+| Mosque via phone app settings | Simpler than on-watch search, slug-based API | Good |
+| Modern devices only (CIQ 4.x+) | Simpler development, better APIs available | Good |
+| Roll to Fajr after Isha | Always show actionable next prayer | Good |
+| Seconds-since-midnight for time math | Avoids Gregorian.moment() UTC/local timezone pitfall | Good |
+| Module pattern (not classes) | Avoids object allocation in 28KB glance budget | Good |
+| Lightweight background delegate | Single /prayer-times request vs 6-step chain avoids 30s timeout | Good |
+| isMosqueConfigured checks Properties | Immediate feedback vs waiting for first successful fetch | Good (bug fix) |
 
 ## Evolution
 
@@ -75,4 +85,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-12 after Phase 3 completion — all v1.0 phases complete*
+*Last updated: 2026-04-12 after v1.0 milestone*
