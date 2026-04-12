@@ -115,7 +115,7 @@ class MawaqitWidgetView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(
             w / 2, headerY,
-            Graphics.FONT_MEDIUM,
+            Graphics.FONT_SMALL,
             countdownText,
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
         );
@@ -242,7 +242,7 @@ class MawaqitWidgetView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(
             w / 2, headerY,
-            Graphics.FONT_MEDIUM,
+            Graphics.FONT_SMALL,
             "-- in --",
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
         );
