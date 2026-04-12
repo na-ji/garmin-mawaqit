@@ -60,16 +60,18 @@ class MawaqitWidgetView extends WatchUi.View {
                 "Mawaqit",
                 Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
             );
+            var noMosqueLine1 = WatchUi.loadResource(Rez.Strings.WidgetNoMosqueLine1) as String;
+            var noMosqueLine2 = WatchUi.loadResource(Rez.Strings.WidgetNoMosqueLine2) as String;
             dc.drawText(
                 w / 2, h / 2,
                 Graphics.FONT_SMALL,
-                "Set mosque in",
+                noMosqueLine1,
                 Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
             );
             dc.drawText(
                 w / 2, h / 2 + h / 8,
                 Graphics.FONT_SMALL,
-                "Garmin Connect app",
+                noMosqueLine2,
                 Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
             );
             return;
@@ -242,11 +244,12 @@ class MawaqitWidgetView extends WatchUi.View {
         var rowSpacing = (h * 50) / (100 * 5);
 
         // Countdown placeholder
+        var placeholderText = WatchUi.loadResource(Rez.Strings.NoDataPlaceholder) as String;
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(
             w / 2, headerY,
             Graphics.FONT_SMALL,
-            "-- in --",
+            placeholderText,
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
         );
 
