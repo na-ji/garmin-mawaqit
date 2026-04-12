@@ -1,12 +1,15 @@
 import Toybox.Application;
 import Toybox.Application.Properties;
 import Toybox.Application.Storage;
+import Toybox.Background;
 import Toybox.WatchUi;
 import Toybox.System;
 import Toybox.Graphics;
 import Toybox.Lang;
+import Toybox.Time;
+import Toybox.Time.Gregorian;
 
-(:glance)
+(:glance, :background)
 class GarminMawaqitApp extends Application.AppBase {
 
     var _currentSlug as String or Null = null;
@@ -27,6 +30,13 @@ class GarminMawaqitApp extends Application.AppBase {
     }
 
     function getInitialView() as [Views] or [Views, InputDelegates] {
+        // Register background refresh if not already registered (Pitfall 7: avoid duplicate registration)
+        var registeredTime = Background.getTemporalEventRegisteredTime();
+        if (registeredTime == null) {
+            // Once daily refresh (86400 seconds = 24 hours) per D-08
+            Background.registerForTemporalEvent(new Time.Duration(86400));
+        }
+
         // Trigger data fetch when entering widget mode (not glance mode)
         if (_currentSlug != null) {
             MawaqitService.fetchPrayerData(_currentSlug);
@@ -37,6 +47,23 @@ class GarminMawaqitApp extends Application.AppBase {
     (:glance)
     function getGlanceView() as [WatchUi.GlanceView] or [WatchUi.GlanceView, WatchUi.GlanceViewDelegate] or Null {
         return [new $.MawaqitGlanceView()] as [WatchUi.GlanceView];
+    }
+
+    (:background)
+    function getServiceDelegate() as [System.ServiceDelegate] {
+        return [new MawaqitServiceDelegate()];
+    }
+
+    function onBackgroundData(data) as Void {
+        if (data != null) {
+            Storage.setValue("todayTimes", data);
+            var info = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
+            var dateStr = info.year + "-" + info.month + "-" + info.day;
+            Storage.setValue("lastFetchDate", dateStr);
+            // lastFetchSlug is set by foreground fetch -- don't overwrite here
+            // because background doesn't know if the slug changed since last foreground fetch
+        }
+        WatchUi.requestUpdate();
     }
 
     function onSettingsChanged() as Void {
