@@ -1,0 +1,21 @@
+<resources>
+    <strings>
+        <!-- Settings (phone app) - Claude's discretion for natural French -->
+        <string id="MosqueSettingTitle">ID Mosquee</string>
+        <string id="MosqueSettingPrompt">Entrez le slug de votre mosquee depuis mawaqit.net</string>
+
+        <!-- Countdown tokens (per D-02, D-03) -->
+        <string id="CountdownIn">dans</string>
+        <string id="CountdownNow">maintenant</string>
+
+        <!-- Glance empty states (per D-07) -->
+        <string id="GlanceNoMosque">Configurer dans l'app Connect</string>
+
+        <!-- Widget empty states (per D-07) -->
+        <string id="WidgetNoMosqueLine1">Configurer la mosquee</string>
+        <string id="WidgetNoMosqueLine2">dans Garmin Connect</string>
+
+        <!-- No-data placeholder (per D-08) -->
+        <string id="NoDataPlaceholder">-- dans --</string>
+    </strings>
+</resources>

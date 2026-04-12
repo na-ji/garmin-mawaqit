@@ -1,7 +1,24 @@
 <resources>
     <strings>
+        <!-- App identity -->
         <string id="AppName">Mawaqit</string>
+
+        <!-- Settings (phone app) -->
         <string id="MosqueSettingTitle">Mosque ID</string>
         <string id="MosqueSettingPrompt">Enter your mosque slug from mawaqit.net</string>
+
+        <!-- Countdown tokens (per D-03) -->
+        <string id="CountdownIn">in</string>
+        <string id="CountdownNow">now</string>
+
+        <!-- Glance empty states (per D-07) -->
+        <string id="GlanceNoMosque">Set mosque in Connect app</string>
+
+        <!-- Widget empty states (per D-07) -->
+        <string id="WidgetNoMosqueLine1">Set mosque in</string>
+        <string id="WidgetNoMosqueLine2">Garmin Connect app</string>
+
+        <!-- No-data placeholder (per D-08) -->
+        <string id="NoDataPlaceholder">-- in --</string>
     </strings>
 </resources>
