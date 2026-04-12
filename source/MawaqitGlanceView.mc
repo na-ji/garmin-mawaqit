@@ -100,10 +100,11 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
                 "Mawaqit",
                 Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER
             );
+            var noMosqueText = WatchUi.loadResource(Rez.Strings.GlanceNoMosque) as String;
             dc.drawText(
                 0, 2 * h / 3,
                 Graphics.FONT_SYSTEM_XTINY,
-                "Set mosque in Connect app",
+                noMosqueText,
                 Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER
             );
             return;
@@ -147,13 +148,16 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
         var bottomY = 3 * h / 4;
 
         // --- Draw top line (D-01, D-04, D-05, D-06, D-07) ---
+        var tokenIn = WatchUi.loadResource(Rez.Strings.CountdownIn) as String;
+        var tokenNow = WatchUi.loadResource(Rez.Strings.CountdownNow) as String;
+
         var topText = "";
         if (state.equals("now")) {
-            topText = PrayerLogic.formatCountdown(0, result["name"] as String);
+            topText = PrayerLogic.formatCountdown(0, result["name"] as String, tokenIn, tokenNow);
         } else if (state.equals("normal")) {
-            topText = PrayerLogic.formatCountdown(result["remaining"] as Number, result["name"] as String);
+            topText = PrayerLogic.formatCountdown(result["remaining"] as Number, result["name"] as String, tokenIn, tokenNow);
         } else if (state.equals("overnight")) {
-            topText = PrayerLogic.formatCountdown(result["remaining"] as Number, result["name"] as String);
+            topText = PrayerLogic.formatCountdown(result["remaining"] as Number, result["name"] as String, tokenIn, tokenNow);
         }
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
@@ -260,11 +264,12 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
         var barY = h / 2 - barHeight / 2;
         var bottomY = 3 * h / 4;
 
+        var placeholderText = WatchUi.loadResource(Rez.Strings.NoDataPlaceholder) as String;
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(
             0, topY,
             Graphics.FONT_GLANCE,
-            "-- in --",
+            placeholderText,
             Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER
         );
 

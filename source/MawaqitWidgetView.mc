@@ -103,13 +103,16 @@ class MawaqitWidgetView extends WatchUi.View {
         var rowSpacing = (h * 50) / (100 * 5);
 
         // --- Draw countdown header ---
+        var tokenIn = WatchUi.loadResource(Rez.Strings.CountdownIn) as String;
+        var tokenNow = WatchUi.loadResource(Rez.Strings.CountdownNow) as String;
+
         var countdownText = "";
         if (state.equals("now")) {
-            countdownText = PrayerLogic.formatCountdown(0, result["name"] as String);
+            countdownText = PrayerLogic.formatCountdown(0, result["name"] as String, tokenIn, tokenNow);
         } else if (state.equals("normal")) {
-            countdownText = PrayerLogic.formatCountdown(result["remaining"] as Number, result["name"] as String);
+            countdownText = PrayerLogic.formatCountdown(result["remaining"] as Number, result["name"] as String, tokenIn, tokenNow);
         } else if (state.equals("overnight")) {
-            countdownText = PrayerLogic.formatCountdown(result["remaining"] as Number, result["name"] as String);
+            countdownText = PrayerLogic.formatCountdown(result["remaining"] as Number, result["name"] as String, tokenIn, tokenNow);
         }
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);

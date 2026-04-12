@@ -255,19 +255,27 @@ module PrayerLogic {
     }
 
     //
-    // Format a countdown duration into a human-readable string.
+    // Format a countdown duration into a human-readable, localized string.
     // Follows the Sunrise glance convention (D-04, D-05, D-06, D-07):
     //
-    //   remainingSec <= 0:  "Asr now"         (D-07: now indicator)
-    //   hours > 0:         "Asr in 2h 5m"    (D-04: hours and minutes)
-    //   mins > 0:          "Asr in 45m"       (D-05: minutes only under 1 hour)
-    //   secs only:         "Asr in 45s"       (D-05: seconds only under 1 minute)
+    //   remainingSec <= 0:  "Asr now"/"Asr maintenant"  (D-07: now indicator)
+    //   hours > 0:         "Asr in 2h 5m"/"Asr dans 2h 5m"  (D-04: hours+minutes)
+    //   mins > 0:          "Asr in 45m"/"Asr dans 45m"   (D-05: minutes only)
+    //   secs only:         "Asr in 45s"/"Asr dans 45s"   (D-05: seconds only)
     //
     // No seconds displayed above 1 minute (D-06).
+    // Time unit suffixes (h, m, s) stay the same in all languages (D-03).
     //
-    function formatCountdown(remainingSec as Number, prayerName as String) as String {
+    // Parameters:
+    //   remainingSec - seconds until next prayer (0 or negative = "now")
+    //   prayerName   - display name (e.g., "Fajr", "Asr")
+    //   tokenIn      - localized "in"/"dans" token from loadResource()
+    //   tokenNow     - localized "now"/"maintenant" token from loadResource()
+    //
+    function formatCountdown(remainingSec as Number, prayerName as String,
+                              tokenIn as String, tokenNow as String) as String {
         if (remainingSec <= 0) {
-            return prayerName + " now";
+            return prayerName + " " + tokenNow;
         }
 
         var hours = remainingSec / 3600;
@@ -275,11 +283,11 @@ module PrayerLogic {
         var secs = remainingSec % 60;
 
         if (hours > 0) {
-            return prayerName + " in " + hours + "h " + mins + "m";
+            return prayerName + " " + tokenIn + " " + hours + "h " + mins + "m";
         } else if (mins > 0) {
-            return prayerName + " in " + mins + "m";
+            return prayerName + " " + tokenIn + " " + mins + "m";
         } else {
-            return prayerName + " in " + secs + "s";
+            return prayerName + " " + tokenIn + " " + secs + "s";
         }
     }
 
