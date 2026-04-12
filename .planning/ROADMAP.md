@@ -47,7 +47,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — PrayerLogic computation module (PRAY-01, PRAY-02, PRAY-03)
-- [ ] 02-02-PLAN.md — GlanceView rendering and timer refresh (GLNC-01, GLNC-02)
+- [x] 02-02-PLAN.md — GlanceView rendering and timer refresh (GLNC-01, GLNC-02)
 
 ### Phase 3: Widget & Background Service
 **Goal**: Users have a detailed prayer schedule Widget and the app keeps data fresh automatically
@@ -59,12 +59,12 @@ Plans:
   3. Widget shows a visual progress indicator between the current and next prayer
   4. Background service periodically refreshes prayer data via temporal events without user intervention
   5. Changing the mosque setting triggers an automatic data re-fetch
-**Plans**: TBD
+**Plans:** 2 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — Full Widget view with 5-row prayer schedule, countdown, and highlighted next prayer (WDGT-01, WDGT-02, WDGT-03)
+- [ ] 03-02-PLAN.md — Background service delegate and temporal event registration (BKGD-01, BKGD-02)
 
 ## Progress
 
@@ -75,4 +75,4 @@ Phases execute in numeric order: 1 -> 2 -> 3
 |-------|----------------|--------|-----------|
 | 1. Data Pipeline & Configuration | 0/2 | Planned | - |
 | 2. Prayer Logic & Glance | 0/2 | Planned | - |
-| 3. Widget & Background Service | 0/? | Not started | - |
+| 3. Widget & Background Service | 0/2 | Not started | - |
