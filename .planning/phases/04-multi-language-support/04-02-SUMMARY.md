@@ -1,9 +1,9 @@
 ---
 phase: 04-multi-language-support
 plan: 02
-status: partial
+status: complete
 started: "2026-04-12T19:25:55Z"
-completed: null
+completed: "2026-04-12T20:15:00Z"
 subsystem: localization
 tags: [i18n, widget, loadResource, french]
 dependency_graph:
@@ -46,7 +46,7 @@ Localize the Widget view surface and verify the complete localization visually. 
 | # | Task | Files Changed | Commit | Status |
 |---|------|---------------|--------|--------|
 | 1 | Localize MawaqitWidgetView with loadResource() | source/MawaqitWidgetView.mc | 3bcc1a1 | Done |
-| 2 | Verify localization in simulator | - | - | Checkpoint (awaiting human verification) |
+| 2 | Verify localization in simulator | source/MawaqitGlanceView.mc | 52cb7bf | Done (loadResource fix + human verified) |
 
 ## Key Files
 
@@ -87,7 +87,7 @@ None.
 
 ## Checkpoint Status
 
-Paused at Task 2 (checkpoint:human-verify). Awaiting user visual verification in Connect IQ simulator that French and English text displays correctly on Widget, Glance, and Settings surfaces.
+Resolved. Human verification revealed that `loadResource()` in Glance exceeded the 28KB memory budget (IQ! crash). Fixed by replacing all `loadResource()` calls in `MawaqitGlanceView.mc` with hardcoded language conditionals using `System.getDeviceSettings().systemLanguage` and `System.LANGUAGE_FRE` constant (D-05 fallback). User verified French/English display works correctly after fix.
 
 ## Self-Check: PASSED
 
