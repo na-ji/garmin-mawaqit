@@ -21,7 +21,20 @@ The next prayer time is always one glance away on the wrist — accurate, clear,
 
 ### Active
 
-(All v1.0 requirements validated)
+- [ ] Multi-language support (French and English)
+- [ ] Optional prayer notifications with per-prayer toggle
+- [ ] Configurable notification timing (at prayer time, 5/10/15 min before)
+- [ ] All new settings configurable via Garmin Connect phone app
+
+## Current Milestone: v1.1 Localization & Notifications
+
+**Goal:** Make the app accessible in French and English, and let users receive alerts when prayer times arrive.
+
+**Target features:**
+- Multi-language support (French and English) across Glance, Widget, and settings UI
+- Optional prayer notifications with per-prayer toggle (Fajr, Dhuhr, Asr, Maghrib, Isha)
+- Configurable notification timing from a preset list (at prayer time, 5/10/15 min before)
+- All notification settings configurable via Garmin Connect phone app
 
 ### Out of Scope
 
@@ -33,7 +46,7 @@ The next prayer time is always one glance away on the wrist — accurate, clear,
 
 ## Current State
 
-Shipped v1.0 as Connect IQ Store beta (2026-04-12). 1,890 lines of Monkey C across 7 source files. Tested on real Garmin watch.
+Shipped v1.0 as Connect IQ Store beta (2026-04-12). 1,890 lines of Monkey C across 7 source files. Tested on real Garmin watch. Starting v1.1 for localization and notifications.
 
 ## Context
 
@@ -85,4 +98,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-12 after v1.0 milestone*
+*Last updated: 2026-04-12 after v1.1 milestone start*
