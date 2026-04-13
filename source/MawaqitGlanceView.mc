@@ -9,7 +9,7 @@ import Toybox.System;
 //
 // Layout:
 //   Top line:    Next prayer name + countdown (e.g., "Asr in 2h 15m")
-//   Middle:      5-segment colored progress bar with white current-time marker
+//   Middle:      6-segment colored progress bar with white current-time marker
 //   Bottom line: Previous prayer time (left) and next prayer time (right)
 //
 // Empty states:
@@ -195,7 +195,10 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
             }
         }
 
-        // Draw each segment
+        // Draw each segment — active segment is thicker (like Sunrise glance)
+        var activeBarHeight = barHeight * 2;
+        var activeBarY = barY - (activeBarHeight - barHeight) / 2;
+
         for (var i = 0; i < segments.size(); i++) {
             var seg = segments[i] as Dictionary;
             var segStart = seg["start"] as Number;
@@ -211,20 +214,26 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
             }
 
             var color;
+            var drawY;
+            var drawH;
             if (i == activeIdx) {
                 color = segColor;
+                drawY = activeBarY;
+                drawH = activeBarHeight;
             } else {
                 color = PrayerLogic.getDimColor(segColor);
+                drawY = barY;
+                drawH = barHeight;
             }
 
             dc.setColor(color, Graphics.COLOR_TRANSPARENT);
-            dc.fillRectangle(segX, barY, segW, barHeight);
+            dc.fillRectangle(segX, drawY, segW, drawH);
         }
 
-        // Draw white current-time marker
+        // Draw white current-time marker (spans full height of active segment + 2px overshoot)
         var markerX = barX + ((currentSec.toFloat() / 86400.0) * barWidth).toNumber();
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(markerX - 1, barY - 2, 3, barHeight + 4);
+        dc.fillRectangle(markerX - 1, activeBarY - 2, 3, activeBarHeight + 4);
 
         // --- Draw bottom line (D-03) ---
         var prevTime = "--:--";

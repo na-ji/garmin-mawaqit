@@ -292,19 +292,20 @@ module PrayerLogic {
     }
 
     //
-    // Build 5 color-coded progress bar segments representing prayer periods (D-02).
+    // Build 6 color-coded progress bar segments representing prayer periods (D-02).
     //
     // Segments:
-    //   0: Fajr-to-Dhuhr   (Deep Blue 0x3366CC)
-    //   1: Dhuhr-to-Asr     (Amber/Gold 0xFFAA00)
-    //   2: Asr-to-Maghrib   (Orange 0xFF6633)
-    //   3: Maghrib-to-Isha  (Deep Red/Crimson 0xCC3333)
-    //   4: Isha-to-Fajr     (Dark Purple 0x6633CC)
+    //   0: Midnight-to-Fajr (Dark Purple 0x6633CC) — overnight wrap continuation
+    //   1: Fajr-to-Dhuhr    (Deep Blue 0x3366CC)
+    //   2: Dhuhr-to-Asr     (Amber/Gold 0xFFAA00)
+    //   3: Asr-to-Maghrib   (Orange 0xFF6633)
+    //   4: Maghrib-to-Isha  (Deep Red/Crimson 0xCC3333)
+    //   5: Isha-to-Midnight (Dark Purple 0x6633CC)
     //
     // Each segment is a Dictionary: {"start" => seconds, "end" => seconds, "color" => colorInt}
     //
-    // For Isha-to-Fajr: start = ichaSec, end = 86400 (midnight).
-    // The GlanceView drawing code handles visual wrapping (0 to fajrSec segment).
+    // The overnight Isha-to-Fajr period is split into two segments (0 and 5)
+    // so the progress bar has full coverage from 0 to 86400.
     //
     // If any parse returns null, uses reasonable defaults to avoid crash.
     //
@@ -323,6 +324,7 @@ module PrayerLogic {
         if (ichaSec == null) { ichaSec = 72000; }       // 20:00 fallback
 
         return [
+            { "start" => 0, "end" => fajrSec, "color" => SEGMENT_COLORS[4] },
             { "start" => fajrSec, "end" => dohrSec, "color" => SEGMENT_COLORS[0] },
             { "start" => dohrSec, "end" => asrSec, "color" => SEGMENT_COLORS[1] },
             { "start" => asrSec, "end" => maghrebSec, "color" => SEGMENT_COLORS[2] },
