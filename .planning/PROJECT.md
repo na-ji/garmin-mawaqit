@@ -21,7 +21,7 @@ The next prayer time is always one glance away on the wrist — accurate, clear,
 
 ### Active
 
-- [ ] Multi-language support (French and English)
+- [x] Multi-language support (French and English) — Validated in Phase 4: Multi-Language Support
 - [ ] Optional prayer notifications with per-prayer toggle
 - [ ] Configurable notification timing (at prayer time, 5/10/15 min before)
 - [ ] All new settings configurable via Garmin Connect phone app
@@ -41,7 +41,7 @@ The next prayer time is always one glance away on the wrist — accurate, clear,
 - ~~Full daily prayer schedule on widget~~ — Delivered in Phase 3 (Widget shows all 5 prayers)
 - Search/browse mosques on the watch — settings via phone app is sufficient
 - Older device support (CIQ 3.x) — modern devices only for v1
-- Prayer notifications/alarms — display only for now
+- ~~Prayer notifications/alarms~~ — Planned for Phase 5
 - Compass/Qibla direction — separate concern
 
 ## Current State
@@ -79,6 +79,9 @@ Shipped v1.0 as Connect IQ Store beta (2026-04-12). 1,890 lines of Monkey C acro
 | Module pattern (not classes) | Avoids object allocation in 28KB glance budget | Good |
 | Lightweight background delegate | Single /prayer-times request vs 6-step chain avoids 30s timeout | Good |
 | isMosqueConfigured checks Properties | Immediate feedback vs waiting for first successful fetch | Good (bug fix) |
+| Glance: hardcoded language conditionals | loadResource() exceeded 28KB glance budget — D-05 fallback | Good (confirmed by testing) |
+| Widget: loadResource() for localization | Standard CIQ resource system, 64-128KB budget is safe | Good |
+| CIQ auto-discovers resources-fre/ | No monkey.jungle modification needed — confirmed by simulator | Good |
 
 ## Evolution
 
@@ -98,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-12 after v1.1 milestone start*
+*Last updated: 2026-04-13 after Phase 4 completion*
