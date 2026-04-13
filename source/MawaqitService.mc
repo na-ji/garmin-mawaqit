@@ -112,11 +112,19 @@ class MawaqitService {
 
     //
     // Callback for calendar endpoint responses.
+    // Converts each day's dictionary to an array before storing to eliminate
+    // repeated key strings. Array order: [fajr, sunrise, dohr, asr, maghreb, icha]
     //
     function onCalendarReceive(responseCode as Number, data as Dictionary or String or Null) as Void {
         if (responseCode == 200 && data != null) {
             var month = (_fetchStep == 0) ? _fetchMonth : _fetchNextMonth;
-            Storage.setValue("cal_" + month, data);
+            var arr = data as Array;
+            var compact = new [arr.size()];
+            for (var i = 0; i < arr.size(); i++) {
+                var day = arr[i] as Dictionary;
+                compact[i] = [day["fajr"], day["sunrise"], day["dohr"], day["asr"], day["maghreb"], day["icha"]];
+            }
+            Storage.setValue("cal_" + month, compact);
             _processNextStep();
         } else {
             _isFetching = false;
@@ -141,11 +149,19 @@ class MawaqitService {
 
     //
     // Callback for iqama endpoint responses.
+    // Converts each day's dictionary to an array before storing.
+    // Array order: [fajr, dohr, asr, maghreb, icha]
     //
     function onIqamaReceive(responseCode as Number, data as Dictionary or String or Null) as Void {
         if (responseCode == 200 && data != null) {
             var month = (_fetchStep == 2) ? _fetchMonth : _fetchNextMonth;
-            Storage.setValue("iqama_" + month, data);
+            var arr = data as Array;
+            var compact = new [arr.size()];
+            for (var i = 0; i < arr.size(); i++) {
+                var day = arr[i] as Dictionary;
+                compact[i] = [day["fajr"], day["dohr"], day["asr"], day["maghreb"], day["icha"]];
+            }
+            Storage.setValue("iqama_" + month, compact);
             _processNextStep();
         } else {
             _isFetching = false;
@@ -201,7 +217,9 @@ class MawaqitService {
     //
     function onPrayerTimesReceive(responseCode as Number, data as Dictionary or String or Null) as Void {
         if (responseCode == 200 && data != null) {
-            Storage.setValue("todayTimes", data);
+            var d = data as Dictionary;
+            var compact = [d["fajr"], d["sunrise"], d["dohr"], d["asr"], d["maghreb"], d["icha"]];
+            Storage.setValue("todayTimes", compact);
 
             // Record fetch metadata
             var info = Gregorian.info(Time.now(), Time.FORMAT_SHORT);

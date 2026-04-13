@@ -56,7 +56,9 @@ class GarminMawaqitApp extends Application.AppBase {
 
     function onBackgroundData(data) as Void {
         if (data != null) {
-            Storage.setValue("todayTimes", data);
+            var d = data as Dictionary;
+            var compact = [d["fajr"], d["sunrise"], d["dohr"], d["asr"], d["maghreb"], d["icha"]];
+            Storage.setValue("todayTimes", compact);
             var info = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
             var dateStr = info.year + "-" + info.month + "-" + info.day;
             Storage.setValue("lastFetchDate", dateStr);

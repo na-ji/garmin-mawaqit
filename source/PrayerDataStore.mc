@@ -12,28 +12,67 @@ import Toybox.Lang;
 (:glance)
 module PrayerDataStore {
 
+    // Key order for calendar arrays: [fajr, sunrise, dohr, asr, maghreb, icha]
+    const CAL_KEYS = ["fajr", "sunrise", "dohr", "asr", "maghreb", "icha"];
+    // Key order for iqama arrays: [fajr, dohr, asr, maghreb, icha]
+    const IQAMA_KEYS = ["fajr", "dohr", "asr", "maghreb", "icha"];
+
+    //
+    // Converts a compact array back to a keyed dictionary.
+    //
+    function _arrayToDict(arr as Array, keys as Array) as Dictionary {
+        var dict = {};
+        for (var i = 0; i < keys.size() && i < arr.size(); i++) {
+            dict[keys[i]] = arr[i];
+        }
+        return dict;
+    }
+
     //
     // Returns one month of calendar prayer times (Array of day objects, 0-indexed).
     // Each element is a Dictionary: { "fajr", "sunrise", "dohr", "asr", "maghreb", "icha" }
+    // Stored compactly as arrays; reconstructed to dictionaries on read.
     //
     function getCalendarMonth(month as Number) as Array? {
-        return Storage.getValue("cal_" + month) as Array?;
+        var raw = Storage.getValue("cal_" + month) as Array?;
+        if (raw == null) {
+            return null;
+        }
+        var result = new [raw.size()];
+        for (var i = 0; i < raw.size(); i++) {
+            result[i] = _arrayToDict(raw[i] as Array, CAL_KEYS);
+        }
+        return result;
     }
 
     //
     // Returns one month of iqama offsets (Array of offset objects, 0-indexed).
     // Each element is a Dictionary: { "fajr", "dohr", "asr", "maghreb", "icha" } with offset strings like "+10"
+    // Stored compactly as arrays; reconstructed to dictionaries on read.
     //
     function getIqamaMonth(month as Number) as Array? {
-        return Storage.getValue("iqama_" + month) as Array?;
+        var raw = Storage.getValue("iqama_" + month) as Array?;
+        if (raw == null) {
+            return null;
+        }
+        var result = new [raw.size()];
+        for (var i = 0; i < raw.size(); i++) {
+            result[i] = _arrayToDict(raw[i] as Array, IQAMA_KEYS);
+        }
+        return result;
     }
 
     //
     // Returns today's prayer times from the /prayer-times endpoint cache.
     // Dictionary: { "fajr", "sunrise", "dohr", "asr", "maghreb", "icha" }
+    // Stored compactly as an array; reconstructed to dictionary on read.
     //
     function getTodayTimes() as Dictionary? {
-        return Storage.getValue("todayTimes") as Dictionary?;
+        var raw = Storage.getValue("todayTimes") as Array?;
+        if (raw == null) {
+            return null;
+        }
+        return _arrayToDict(raw, CAL_KEYS);
     }
 
     //
