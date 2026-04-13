@@ -89,7 +89,7 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
         var w = dc.getWidth();
         var h = dc.getHeight();
 
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.clear();
 
         // D-05 fallback: check language once for all hardcoded string conditionals
@@ -217,13 +217,13 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
                 color = PrayerLogic.getDimColor(segColor);
             }
 
-            dc.setColor(color, Graphics.COLOR_BLACK);
+            dc.setColor(color, Graphics.COLOR_TRANSPARENT);
             dc.fillRectangle(segX, barY, segW, barHeight);
         }
 
         // Draw white current-time marker
         var markerX = barX + ((currentSec.toFloat() / 86400.0) * barWidth).toNumber();
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.fillRectangle(markerX - 1, barY - 2, 3, barHeight + 4);
 
         // --- Draw bottom line (D-03) ---
@@ -288,7 +288,7 @@ class MawaqitGlanceView extends WatchUi.GlanceView {
         );
 
         // Single dim gray bar
-        dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
+        dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_TRANSPARENT);
         dc.fillRectangle(barX, barY, barWidth, barHeight);
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
